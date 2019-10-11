@@ -106,6 +106,14 @@ public class Main {
                 "Base Cover Parameters", "Cover")));
         window.add(coverParamsButton("Hole 1", e -> displayBaseCoverParamsConfigWindow(
                 "Hole 1 Parameters", "Hole 1")));
+        window.add(coverParamsButton("Hole 2", e -> displayBaseCoverParamsConfigWindow(
+                "Hole 2 Parameters", "Hole 2")));
+        window.add(coverParamsButton("Hole 3", e -> displayBaseCoverParamsConfigWindow(
+                "Hole 3 Parameters", "Hole 3")));
+        window.add(coverParamsButton("Hole 4", e -> displayBaseCoverParamsConfigWindow(
+                "Hole 4 Parameters", "Hole 4")));
+        window.add(coverParamsButton("Hole 5", e -> displayBaseCoverParamsConfigWindow(
+                "Hole 5 Parameters", "Hole 5")));
 
         window.setVisible(true);
     }
