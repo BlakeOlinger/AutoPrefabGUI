@@ -14,6 +14,7 @@ public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
     private static final Path COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.txt");
     private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
+    private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
 
@@ -141,30 +142,67 @@ public class Main {
             }
         }
 
-        if (!windowTitle.contains("Base Cover")) {
-            var radioButtons = holeAssemblyConfigRadios();
-            var buttonGroup = new ButtonGroup();
+        if (!windowTitle.contains("Base Cover"))
+            window.add(holeAssemblyConfigButton(variableName));
 
-            for (JRadioButton radioButton : radioButtons) {
-                buttonGroup.add(radioButton);
-            }
+        window.add(baseCoverParamsBuildButton(variableName));
 
-            for (JRadioButton radioButton : radioButtons) {
-                window.add(radioButton);
-            }
-
-            window.add(baseCoverParamsBuildButton(variableName));
-        }
         window.setVisible(true);
     }
 
+    private static JButton holeAssemblyConfigButton(String variableName) {
+        var button = new JButton("Assembly Config");
+        button.addActionListener(e -> holeAssemblyConfigWindow(variableName));
+        return button;
+    }
+
+    private static void holeAssemblyConfigWindow(String variableName) {
+        var window = new JFrame(variableName + " Assembly Configuration");
+        window.setSize(300, 400);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        var radioButtons = holeAssemblyConfigRadios();
+        var buttonGroup = new ButtonGroup();
+
+        for (JRadioButton radioButton : radioButtons) {
+            buttonGroup.add(radioButton);
+        }
+
+        for (JRadioButton radioButton : radioButtons) {
+            window.add(radioButton);
+        }
+
+        window.add(confirmHoleAssemblyConfigButton(variableName, buttonGroup));
+
+        window.setVisible(true);
+    }
+
+    private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
+        var button = new JButton("Confirm");
+        button.addActionListener(e -> System.out.println(variableName + ": " + buttonGroup.getSelection().getActionCommand()));
+        return button;
+    }
+
     private static JRadioButton[] holeAssemblyConfigRadios() {
+        var pf150s0deg = new JRadioButton("PF150S 0deg");
+        pf150s0deg.setActionCommand("PF150S 0deg");
+        var pf200t90deg = new JRadioButton("PF200T 90deg");
+        pf200t90deg.setActionCommand("PF200T 90deg");
+        var ecg2 = new JRadioButton("ECG 2 Hole");
+        ecg2.setActionCommand("ECG 2 Hole");
+        var inspection10in45degBC = new JRadioButton("10in Inspection Plate 45deg BC");
+        inspection10in45degBC.setActionCommand("10in Inspection Plate 45deg BC");
+        var none = new JRadioButton("none");
+        none.setActionCommand("none");
+
         return new JRadioButton[]{
-                new JRadioButton("PF150S 0deg"),
-                new JRadioButton("PF200T 90deg"),
-                new JRadioButton("ECG 2 Hole"),
-                new JRadioButton("10in Inspection Plate 45deg BC"),
-                new JRadioButton("none")
+                pf150s0deg,
+                pf200t90deg,
+                ecg2,
+                inspection10in45degBC,
+                none
         };
     }
 
