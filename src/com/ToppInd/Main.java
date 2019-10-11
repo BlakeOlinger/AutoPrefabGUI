@@ -215,6 +215,7 @@ public class Main {
     private static void writeBaseCoverChanges(String variableName) {
         var coverConfigContentLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
 
+        // TODO - also update the blob.L2_cover.SLDASM config.txt Hole x X/Z Offset
         // gets cover variables - user input and appends the line with the changed value to the lines array
         for (String userInputVariable : coverConfigVariableUserInputTable.keySet()) {
             if (userInputVariable.contains(variableName) &&
