@@ -70,9 +70,6 @@ public class Main {
         window.setVisible(true);
     }
 
-    // TODO - add to "Build Drawing" button the call to the
-    //  - C# daemon that turns off marked for drawing on dimensions equal to zero (still have to make that)
-    //  - ** it may not need it - it doesn't need to have dimensions turned off for dimensions inside suppressed drawings
     private static JButton buildDrawingButton() {
         var button = new JButton("Build Drawing");
         button.addActionListener(e -> {
@@ -144,9 +141,31 @@ public class Main {
             }
         }
 
-        window.add(baseCoverParamsBuildButton(variableName));
+        if (!windowTitle.contains("Base Cover")) {
+            var radioButtons = holeAssemblyConfigRadios();
+            var buttonGroup = new ButtonGroup();
 
+            for (JRadioButton radioButton : radioButtons) {
+                buttonGroup.add(radioButton);
+            }
+
+            for (JRadioButton radioButton : radioButtons) {
+                window.add(radioButton);
+            }
+
+            window.add(baseCoverParamsBuildButton(variableName));
+        }
         window.setVisible(true);
+    }
+
+    private static JRadioButton[] holeAssemblyConfigRadios() {
+        return new JRadioButton[]{
+                new JRadioButton("PF150S 0deg"),
+                new JRadioButton("PF200T 90deg"),
+                new JRadioButton("ECG 2 Hole"),
+                new JRadioButton("10in Inspection Plate 45deg BC"),
+                new JRadioButton("none")
+        };
     }
 
     private static JButton baseCoverParamsBuildButton(String variableName) {
