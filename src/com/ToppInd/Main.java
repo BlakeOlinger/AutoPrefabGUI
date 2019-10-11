@@ -180,8 +180,20 @@ public class Main {
     }
 
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
+        // TODO - write the config.txt file and make all but one set to 0, all to 0 if none is selected by user
+        // TODO - then call write to rebuild.txt file for the path of the *.SLDASM config.txt path
+        // TODO - then call rebuild() to invoke the C# daemon - must have updated daemon to check if file
+        //  - path read from the rebuild.txt file is the current active file and if not change to that file
         var button = new JButton("Confirm");
-        button.addActionListener(e -> System.out.println(variableName + ": " + buttonGroup.getSelection().getActionCommand()));
+        button.addActionListener(e -> {
+            // read blob.L2_cover.txt file and split into lines
+            var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
+
+            // check if line doesn't contain an '@' character or "IIF"
+            // if not *.put(that line split("=")[0], index)
+            var index = 0;
+
+        });
         return button;
     }
 
@@ -241,7 +253,7 @@ public class Main {
             builder.append("\n");
         }
         FilesUtil.write(builder.toString(), COVER_CONFIG_PATH);
-
+// TODO CALL BELOW TWO METHODS TWICE; once more for the *.SLDASM file - change rebuild daemon to search path for the extension, *.SLDPRT/*.SLDASM and switch to that model's active view before rebuilding - this is why it's necessary to cal it twice, once for each file rebuild
         // write to rebuild.txt which file to look for negative values in
         FilesUtil.write(COVER_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
