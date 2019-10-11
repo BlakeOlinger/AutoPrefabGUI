@@ -4,6 +4,7 @@ import bo.core.system.FilesUtil;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -168,8 +169,20 @@ public class Main {
         }
         FilesUtil.write(builder.toString(), COVER_CONFIG_PATH);
 
-        // call C# auto-rebuild daemon
         // write to rebuild.txt which file to look for negative values in
         FilesUtil.write(COVER_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+        // call C# auto-rebuild daemon
+        rebuild();
+    }
+
+    private static void rebuild() {
+        try {
+            var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", "AutoRebuildPart.appref-ms").start();
+            rebuildDaemonProcess.waitFor();
+            rebuildDaemonProcess.destroy();
+        } catch (InterruptedException | IOException e) {
+            e.printStackTrace();
+        }
     }
 }
