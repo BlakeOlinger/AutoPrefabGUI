@@ -15,7 +15,6 @@ public class Main {
     private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
-    private static HashMap<String, String> coverConfigVariableCurrentValueTable = new HashMap<>();
 
     public static void main(String[] args) {
         // read cover config contents and set cover config variable table
@@ -24,24 +23,8 @@ public class Main {
         // set user input parameters table based on cover config variable table
         setUserInputParametersTable();
 
-        // sets table for current variable values
-        setCurrentVariableValuesTable();
-
         // display main window
          displayAppWindow();
-    }
-
-    private static void setCurrentVariableValuesTable() {
-        var coverConfigContents = FilesUtil.read(COVER_CONFIG_PATH);
-
-        var coverConfigLines = coverConfigContents.split("\n");
-        for (String line : coverConfigLines) {
-            if (!line.contains("@") && !line.contains("IIF")) {
-                var variable = line.split("=")[0];
-                var value = line.split("=")[1];
-                coverConfigVariableCurrentValueTable.put(variable, value);
-            }
-        }
     }
 
     private static void setUserInputParametersTable() {
@@ -80,7 +63,26 @@ public class Main {
         // add "Configure Cover" button
         window.add(configureCoverButton(), BorderLayout.NORTH);
 
+        // add "Build Drawing" button
+        window.add(buildDrawingButton(), BorderLayout.SOUTH);
+
         window.setVisible(true);
+    }
+
+    // TODO - add to "Build Drawing" button the call to the
+    //  - C# daemon that turns off marked for drawing on dimensions equal to zero (still have to make that)
+    private static JButton buildDrawingButton() {
+        var button = new JButton("Build Drawing");
+        button.addActionListener(e -> {
+            try {
+                var buildDrawingDaemonProcess = new ProcessBuilder("cmd.exe", "/c", "AutoPrefabDaemon.bat").start();
+                buildDrawingDaemonProcess.waitFor();
+                buildDrawingDaemonProcess.destroy();
+            } catch (IOException | InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        });
+        return button;
     }
 
     private static JButton configureCoverButton() {
