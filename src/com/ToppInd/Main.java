@@ -4,6 +4,7 @@ import bo.core.system.FilesUtil;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -71,6 +72,7 @@ public class Main {
 
     // TODO - add to "Build Drawing" button the call to the
     //  - C# daemon that turns off marked for drawing on dimensions equal to zero (still have to make that)
+    //  - ** it may not need it - it doesn't need to have dimensions turned off for dimensions inside suppressed drawings
     private static JButton buildDrawingButton() {
         var button = new JButton("Build Drawing");
         button.addActionListener(e -> {
@@ -100,19 +102,22 @@ public class Main {
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        window.add(coverParamsButton());
+        window.add(coverParamsButton("Base Cover", e -> displayBaseCoverParamsConfigWindow(
+                "Base Cover Parameters", "Cover")));
+        window.add(coverParamsButton("Hole 1", e -> displayBaseCoverParamsConfigWindow(
+                "Hole 1 Parameters", "Hole 1")));
 
         window.setVisible(true);
     }
 
-    private static JButton coverParamsButton() {
-        var button = new JButton("Base Cover");
-        button.addActionListener(e -> displayBaseCoverParamsConfigWindow());
+    private static JButton coverParamsButton(String label, ActionListener actionListener) {
+        var button = new JButton(label);
+        button.addActionListener(actionListener);
         return button;
     }
 
-    private static void displayBaseCoverParamsConfigWindow() {
-        var window = new JFrame("Base Cover Parameters");
+    private static void displayBaseCoverParamsConfigWindow(String windowTitle, String variableName) {
+        var window = new JFrame(windowTitle);
         window.setSize(300, 400);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
@@ -123,7 +128,7 @@ public class Main {
         window.add(new JLabel(" Click the Build button to generate the model."));
 
         for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
-            if (variable.contains("Cover")) {
+            if (variable.contains(variableName)) {
                 window.add(new JLabel(variable + ": "));
                 var textInput = new JTextField( 4);
                 textInput.addActionListener(e -> coverConfigVariableUserInputTable.put(variable, e.getActionCommand()));
@@ -131,23 +136,23 @@ public class Main {
             }
         }
 
-        window.add(baseCoverParamsBuildButton());
+        window.add(baseCoverParamsBuildButton(variableName));
 
         window.setVisible(true);
     }
 
-    private static JButton baseCoverParamsBuildButton() {
+    private static JButton baseCoverParamsBuildButton(String variableName) {
         var button = new JButton("Build");
-        button.addActionListener(e -> writeBaseCoverChanges());
+        button.addActionListener(e -> writeBaseCoverChanges(variableName));
         return button;
     }
 
-    private static void writeBaseCoverChanges() {
+    private static void writeBaseCoverChanges(String variableName) {
         var coverConfigContentLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
 
         // gets cover variables - user input and appends the line with the changed value to the lines array
         for (String userInputVariable : coverConfigVariableUserInputTable.keySet()) {
-            if (userInputVariable.contains("Cover") &&
+            if (userInputVariable.contains(variableName) &&
             !coverConfigVariableUserInputTable.get(userInputVariable).isEmpty()) {
                 var variableLineNumber = coverConfigVariableNameLineNumberTable.get(userInputVariable);
                 var lineSuffix = "";
