@@ -4,7 +4,6 @@ import bo.core.system.FilesUtil;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -12,7 +11,44 @@ import java.util.HashMap;
 public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
     private static final Path COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.txt");
+    private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
+    private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
+    private static HashMap<String, String> coverConfigVariableCurrentValueTable = new HashMap<>();
+
     public static void main(String[] args) {
+        // read cover config contents and set cover config variable table
+        setCoverConfigVariableNameLineNumberTable();
+
+        // set user input parameters table based on cover config variable table
+        setUserInputParametersTable();
+
+        // sets table for current variable values
+        setCurrentVariableValuesTable();
+
+        // display main window
+         displayAppWindow();
+    }
+
+    private static void setCurrentVariableValuesTable() {
+        var coverConfigContents = FilesUtil.read(COVER_CONFIG_PATH);
+
+        var coverConfigLines = coverConfigContents.split("\n");
+        for (String line : coverConfigLines) {
+            if (!line.contains("@") && !line.contains("IIF")) {
+                var variable = line.split("=")[0];
+                var value = line.split("=")[1];
+                coverConfigVariableCurrentValueTable.put(variable, value);
+            }
+        }
+    }
+
+    private static void setUserInputParametersTable() {
+        for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
+            coverConfigVariableUserInputTable.put(variable, "");
+        }
+    }
+
+    private static void setCoverConfigVariableNameLineNumberTable() {
         // read cover config contents
         var coverConfigContent = FilesUtil.read(COVER_CONFIG_PATH);
 
@@ -20,20 +56,16 @@ public class Main {
         var coverConfigLines = coverConfigContent.split("\n");
 
         // create line to line number relationship for each variable
-        var variableNameLineNumberTable = new HashMap<String, Integer>();
         var index = 0;
-            // sort by line NOT contains @ or "IIF" - increment index each line - if NOT HashMap.put()
+        // sort by line NOT contains @ or "IIF" - increment index each line - if NOT HashMap.put()
         for (String line : coverConfigLines) {
             if (!line.contains("@") && !line.contains("IIF")){
                 // get variable name from line
                 var variableName = line.split("=")[0];
-                variableNameLineNumberTable.put(variableName, index);
+                coverConfigVariableNameLineNumberTable.put(variableName, index);
             }
             ++index;
         }
-
-        // display main window
-         displayAppWindow();
     }
 
     private static void displayAppWindow() {
@@ -52,12 +84,59 @@ public class Main {
     private static JButton configureCoverButton() {
         var button = new JButton("Configure Cover");
 
-        button.addActionListener(configureButtonAction());
+        button.addActionListener(e -> displayCoverConfigWindow());
 
         return button;
     }
 
-    private static ActionListener configureButtonAction() {
-        return e -> System.out.println("Action!");
+    private static void displayCoverConfigWindow() {
+        var window = new JFrame("Cover Configurer");
+        window.setLayout(new FlowLayout());
+        window.setSize(400, 700);
+        window.setLocationRelativeTo(null);
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        window.add(coverParamsButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton coverParamsButton() {
+        var button = new JButton("Base Cover");
+        button.addActionListener(e -> displayBaseCoverParamsConfigWindow());
+        return button;
+    }
+
+    private static void displayBaseCoverParamsConfigWindow() {
+        var window = new JFrame("Base Cover Parameters");
+        window.setSize(300, 400);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        window.add(new JLabel("Instructions:"));
+        window.add(new JLabel(" After each input press Enter to 'set' the value."));
+        window.add(new JLabel(" Click the Build button to generate the model."));
+
+        for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
+            if (variable.contains("Cover")) {
+                window.add(new JLabel(variable + ": "));
+                var textInput = new JTextField( 4);
+                textInput.addActionListener(e -> coverConfigVariableUserInputTable.put(variable, e.getActionCommand()));
+                window.add(textInput);
+            }
+        }
+
+        window.add(baseCoverParamsBuildButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton baseCoverParamsBuildButton() {
+        var button = new JButton("Build");
+        button.addActionListener(e -> {
+
+        });
+        return button;
     }
 }
