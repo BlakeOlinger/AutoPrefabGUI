@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="boLib">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../boLibCore/out/artifacts/boLib_jar/boLib.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
