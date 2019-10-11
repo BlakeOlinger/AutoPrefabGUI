@@ -11,6 +11,7 @@ import java.util.HashMap;
 public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
     private static final Path COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.txt");
+    private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableCurrentValueTable = new HashMap<>();
@@ -134,9 +135,41 @@ public class Main {
 
     private static JButton baseCoverParamsBuildButton() {
         var button = new JButton("Build");
-        button.addActionListener(e -> {
-
-        });
+        button.addActionListener(e -> writeBaseCoverChanges());
         return button;
+    }
+
+    private static void writeBaseCoverChanges() {
+        var coverConfigContentLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
+
+        // gets cover variables - user input and appends the line with the changed value to the lines array
+        for (String userInputVariable : coverConfigVariableUserInputTable.keySet()) {
+            if (userInputVariable.contains("Cover") &&
+            !coverConfigVariableUserInputTable.get(userInputVariable).isEmpty()) {
+                var variableLineNumber = coverConfigVariableNameLineNumberTable.get(userInputVariable);
+                var lineSuffix = "";
+                if (coverConfigContentLines[variableLineNumber].contains("in")) {
+                    lineSuffix = "in";
+                } else if (coverConfigContentLines[variableLineNumber].contains("deg")) {
+                    lineSuffix = "deg";
+                }
+                var newLine = userInputVariable + "= " + coverConfigVariableUserInputTable.get(userInputVariable) +
+                        lineSuffix;
+
+                coverConfigContentLines[variableLineNumber] = newLine;
+            }
+        }
+
+        // write updated content to file
+        var builder = new StringBuilder();
+        for (String line : coverConfigContentLines) {
+            builder.append(line);
+            builder.append("\n");
+        }
+        FilesUtil.write(builder.toString(), COVER_CONFIG_PATH);
+
+        // call C# auto-rebuild daemon
+        // write to rebuild.txt which file to look for negative values in
+        FilesUtil.write(COVER_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
     }
 }
