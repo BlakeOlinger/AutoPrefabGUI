@@ -185,7 +185,8 @@ public class Main {
             // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
             // read blob.L2_cover.txt file and split into lines
             var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
-
+// FIXME - for any write to *.txt config file - write 1 of three states; ! - rebuild as negate - write negate; "" - rebuild write positive/don't overwrite; (-) - rebuild positive write negative
+//  - this way it's possible to determine if the negation is versus a prior negative state or not -
             // get line - line number for variables pairs
             var variableLineNumberTable = new HashMap<String, Integer>();
 
@@ -244,23 +245,6 @@ public class Main {
                 }
             }
 
-            // replace previous config lines with current
-            var rebuildText = new StringBuilder();
-            rebuildText.append(COVER_ASSEMBLY_CONFIG_PATH.toString());
-            rebuildText.append("\n");
-            for (String newVariable : newVariableTable.keySet()) {
-                if (newVariableTable.get(newVariable).contains("-")) {
-                    for (String configContentLine : configContentLines) {
-                        if (configContentLine.contains(newVariable) && configContentLine.contains("@")) {
-                            rebuildText.append(configContentLine.split("=")[0].split("@")[1].replace("\"", ""));
-                            rebuildText.append("\n");
-                        }
-                    }
-                    configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable).replace("-", "");
-                } else
-                    configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
-            }
-
             // write config to config.txt file
             var builder = new StringBuilder();
             for (String line : configContentLines) {
@@ -271,10 +255,8 @@ public class Main {
             // write new config
             FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
-            // write to rebuild.txt the path to the assembly config.txt file
-            FilesUtil.write(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-
             // call rebuild daemon
+            writeAssemblyMatesToFlip(newVariableTable, configContentLines, variableLineNumberTable);
             rebuild();
         });
         return button;
@@ -342,7 +324,30 @@ public class Main {
         rebuild();
     }
 
+    private static void writeAssemblyMatesToFlip(HashMap<String, String> newVariableTable,
+                                        String[] configContentLines,
+                                        HashMap<String, Integer> variableLineNumberTable) {
+        var rebuildText = new StringBuilder();
+        rebuildText.append(COVER_ASSEMBLY_CONFIG_PATH.toString());
+        rebuildText.append("\n");
+        for (String newVariable : newVariableTable.keySet()) {
+            if (newVariableTable.get(newVariable).contains("-")) {
+                for (String configContentLine : configContentLines) {
+                    if (configContentLine.contains(newVariable) && configContentLine.contains("@")) {
+                        rebuildText.append(configContentLine.split("=")[0].split("@")[1].replace("\"", ""));
+                        rebuildText.append("\n");
+                    }
+                }
+                configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable).replace("-", "");
+            } else
+                configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
+        }
+
+        FilesUtil.write(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+    }
+
     private static void rebuild() {
+        // write to rebuild.txt the path to the assembly config.txt file
         try {
             var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", "AutoRebuildPart.appref-ms").start();
             rebuildDaemonProcess.waitFor();
@@ -351,4 +356,5 @@ public class Main {
             e.printStackTrace();
         }
     }
+
 }
