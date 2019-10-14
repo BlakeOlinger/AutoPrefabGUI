@@ -183,6 +183,8 @@ public class Main {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
             // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
+            // FIXME - mates can't utilize a simple negative number to achieve negation - in the daemon if there is a negation auto-check the 'flip dimension direction'
+            //  - for that mate - so that if the value is negative the 'flip this dimension direction' is true
             // read blob.L2_cover.txt file and split into lines
             var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
@@ -238,7 +240,7 @@ public class Main {
                                 }
                                 newVariableTable.put(putVariable, secondSegment.trim());
                             }
-                        } // TODO - fix rebuild Daemon to not remove '-' character from non-numbers
+                        }
                         ++readCount;
                     }
                 }
@@ -255,14 +257,15 @@ public class Main {
                 builder.append(line);
                 builder.append("\n");
             }
-            System.out.println(builder.toString());
-//            FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+
+            // write new config
+            FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
             // write to rebuild.txt the path to the assembly config.txt file
-//            FilesUtil.write(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            FilesUtil.write(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
             // call rebuild daemon
-//            rebuild();
+            rebuild();
         });
         return button;
     }
@@ -310,7 +313,6 @@ public class Main {
                 }
                 var newLine = userInputVariable + "= " + coverConfigVariableUserInputTable.get(userInputVariable) +
                         lineSuffix;
-
                 coverConfigContentLines[variableLineNumber] = newLine;
             }
         }
