@@ -183,8 +183,6 @@ public class Main {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
             // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
-            // FIXME - mates can't utilize a simple negative number to achieve negation - in the daemon if there is a negation auto-check the 'flip dimension direction'
-            //  - for that mate - so that if the value is negative the 'flip this dimension direction' is true
             // read blob.L2_cover.txt file and split into lines
             var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
@@ -247,8 +245,20 @@ public class Main {
             }
 
             // replace previous config lines with current
+            var rebuildText = new StringBuilder();
+            rebuildText.append(COVER_ASSEMBLY_CONFIG_PATH.toString());
+            rebuildText.append("\n");
             for (String newVariable : newVariableTable.keySet()) {
-                configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
+                if (newVariableTable.get(newVariable).contains("-")) {
+                    for (String configContentLine : configContentLines) {
+                        if (configContentLine.contains(newVariable) && configContentLine.contains("@")) {
+                            rebuildText.append(configContentLine.split("=")[0].split("@")[1].replace("\"", ""));
+                            rebuildText.append("\n");
+                        }
+                    }
+                    configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable).replace("-", "");
+                } else
+                    configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
             }
 
             // write config to config.txt file
@@ -262,7 +272,7 @@ public class Main {
             FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
             // write to rebuild.txt the path to the assembly config.txt file
-            FilesUtil.write(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            FilesUtil.write(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
             // call rebuild daemon
             rebuild();
