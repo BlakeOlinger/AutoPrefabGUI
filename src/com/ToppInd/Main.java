@@ -13,18 +13,14 @@ import java.util.HashMap;
 public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
     private static final Path COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.txt");
+    private static final Path SQUARE_COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverSquare.txt");
     private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
+    private static String coverShapeSelection = "Circular";
 
     public static void main(String[] args) {
-        // read cover config contents and set cover config variable table
-        setCoverConfigVariableNameLineNumberTable();
-
-        // set user input parameters table based on cover config variable table
-        setUserInputParametersTable();
-
         // display main window
          displayAppWindow();
     }
@@ -35,9 +31,9 @@ public class Main {
         }
     }
 
-    private static void setCoverConfigVariableNameLineNumberTable() {
+    private static void setCoverConfigVariableNameLineNumberTable(Path path) {
         // read cover config contents
-        var coverConfigContent = FilesUtil.read(COVER_CONFIG_PATH);
+        var coverConfigContent = FilesUtil.read(path);
 
         // split by new line
         var coverConfigLines = coverConfigContent.split("\n");
@@ -87,33 +83,99 @@ public class Main {
 
     private static JButton configureCoverButton() {
         var button = new JButton("Configure Cover");
-
-        button.addActionListener(e -> displayCoverConfigWindow());
-
+        button.addActionListener(e -> displayCoverShapeSelector());
         return button;
     }
 
-    private static void displayCoverConfigWindow() {
+    private static void displayCoverShapeSelector() {
+        var window = new JFrame("Select Shape");
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setSize(200, 150);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+
+        var circleSelectButton = new JButton("Circular");
+        circleSelectButton.addActionListener(e -> displayCoverConfigWindow("Circular"));
+        var squareSelectButton = new JButton("Square");
+        squareSelectButton.addActionListener(e -> displayCoverConfigWindow("Square"));
+
+        window.add(circleSelectButton);
+        window.add(squareSelectButton);
+
+        window.setVisible(true);
+    }
+
+    private static void displayCoverConfigWindow(String shapeSelection) {
         var window = new JFrame("Cover Configurer");
         window.setLayout(new FlowLayout());
-        window.setSize(400, 700);
+        window.setSize(400, 300);
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
+        // populate coverParamsButton() arguments and number by reading the selected shape's config.txt file and extracting relevant variables
+
+        coverShapeSelection = shapeSelection;
+
+        // read cover config contents and set cover config variable table
+        setCoverConfigVariableNameLineNumberTable(shapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH);
+
+        // define total number of hole features to know the number of hole feature buttons to produce
+        var holeFeatures = 0;
+        for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
+            if (!variable.matches("[^0-9]*"))
+                holeFeatures = Math.max(Integer.parseInt(variable.split(" ")[1]), holeFeatures);
+        }
+
+        // set user input parameters table based on cover config variable table
+        setUserInputParametersTable();
+
         window.add(coverParamsButton("Base Cover", e -> displayBaseCoverParamsConfigWindow(
                 "Base Cover Parameters", "Cover")));
-        window.add(coverParamsButton("Hole 1", e -> displayBaseCoverParamsConfigWindow(
-                "Hole 1 Parameters", "Hole 1")));
-        window.add(coverParamsButton("Hole 2", e -> displayBaseCoverParamsConfigWindow(
-                "Hole 2 Parameters", "Hole 2")));
-        window.add(coverParamsButton("Hole 3", e -> displayBaseCoverParamsConfigWindow(
-                "Hole 3 Parameters", "Hole 3")));
-        window.add(coverParamsButton("Hole 4", e -> displayBaseCoverParamsConfigWindow(
-                "Hole 4 Parameters", "Hole 4")));
-        window.add(coverParamsButton("Hole 5", e -> displayBaseCoverParamsConfigWindow(
-                "Hole 5 Parameters", "Hole 5")));
+        for (var i = 1; i <= holeFeatures; ++i) {
+            int finalI = i;
+            window.add(coverParamsButton("Hole " + i, e -> displayBaseCoverParamsConfigWindow(
+                    "Hole " + finalI + " Parameters", "Hole " + finalI)
+            ));
+        }
+        window.add(selectMaterialButton());
 
         window.setVisible(true);
+    }
+
+    private static JButton selectMaterialButton() {
+        var button = new JButton("Material");
+        button.addActionListener(e -> displaySelectMaterialWindow());
+        return button;
+    }
+
+    private static void displaySelectMaterialWindow() {
+        var window = new JFrame("Select Material");
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setSize(300, 300);
+        window.setLayout(new FlowLayout());
+        window.setLocationRelativeTo(null);
+
+        window.add(materialConfigButton("ASTM A36 Steel"));
+        window.add(materialConfigButton("6061 Alloy"));
+
+        window.setVisible(true);
+    }
+
+    private static JButton materialConfigButton(String material) {
+        var button = new JButton(material);
+        button.addActionListener(e -> writeMaterialConfig(material));
+        return button;
+    }
+
+    // TODO - finish having material config selection write to the appropriate config.txt file
+    // TODO - have C# daemon read the "Material"= # line and configure the *.SLDPRT file material accordingly
+    private static void writeMaterialConfig(String material) {
+        var configLines = FilesUtil.read(coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH).split("\n");
+        for (var i = 0; i < configLines.length; ++i) {
+            if (configLines[i].split("=")[0].contains("Material")) {
+                System.out.println(configLines[i]);
+            }
+        }
     }
 
     private static JButton coverParamsButton(String label, ActionListener actionListener) {
@@ -290,7 +352,8 @@ public class Main {
     }
 
     private static void writeBaseCoverChanges(String variableName) {
-        var coverConfigContentLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
+        var coverConfigPath = coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
+        var coverConfigContentLines = FilesUtil.read(coverConfigPath).split("\n");
 
         // gets cover variables - user input and appends the line with the changed value to the lines array
         for (String userInputVariable : coverConfigVariableUserInputTable.keySet()) {
@@ -315,10 +378,10 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-        FilesUtil.write(builder.toString(), COVER_CONFIG_PATH);
+        FilesUtil.write(builder.toString(), coverConfigPath);
 
         // write to rebuild.txt which file to look for negative values in
-        FilesUtil.write(COVER_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        FilesUtil.write(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
         // call C# auto-rebuild daemon
         rebuild();
