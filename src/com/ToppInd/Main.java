@@ -180,19 +180,89 @@ public class Main {
     }
 
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
-        // TODO - write the config.txt file and make all but one set to 0, all to 0 if none is selected by user
-        // TODO - then call write to rebuild.txt file for the path of the *.SLDASM config.txt path
-        // TODO - then call rebuild() to invoke the C# daemon - must have updated daemon to check if file
-        //  - path read from the rebuild.txt file is the current active file and if not change to that file
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
+            // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
             // read blob.L2_cover.txt file and split into lines
             var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
+            // get line - line number for variables pairs
+            var variableLineNumberTable = new HashMap<String, Integer>();
+
             // check if line doesn't contain an '@' character or "IIF"
             // if not *.put(that line split("=")[0], index)
+            var xOffset = "";
+            var zOffset = "";
             var index = 0;
+            for (String line : configContentLines) {
+                if (!line.contains("@") && !line.contains("IIF") &&
+                line.contains("Bool")) {
+                    var boolVariable = line.split("=")[0];
+                    variableLineNumberTable.put(boolVariable, index);
+                } else if (!line.contains("@") && !line.contains("IIF") &&
+                line.contains("Offset")) {
+                    var offset = line.split("=")[0].trim();
+                    variableLineNumberTable.put(offset, index);
+                    if (offset.contains("X")) {
+                        xOffset = offset;
+                    } else {
+                        zOffset = offset;
+                    }
+                }
+                ++index;
+            }
+            var userSelection = buttonGroup.getSelection().getActionCommand();
 
+            // define set of user input variables
+            var readCount = 0;
+            var newVariableTable = new HashMap<String, String>();
+            for (String variable : variableLineNumberTable.keySet()) {
+                if (!variable.contains("Offset")) {
+                    newVariableTable.put(variable, variable.contains(userSelection) ? "1" : "0");
+                } else {
+                    // if variable contains Offset - read from blob.cover.txt for the variableName hole number and get the hole # X/Z CA Offset values
+                    // put that in the value of the variable
+                    if (readCount == 0) {
+                        var baseCoverConfigLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
+                        for (String line : baseCoverConfigLines) {
+                            var segments = line.split("=");
+                            var firstSegment = segments[0];
+                            var secondSegment = segments[1];
+                            if (firstSegment.contains(variableName) && firstSegment.contains("Offset") &&
+                                    firstSegment.contains("CA")) {
+                                var putVariable = "";
+                                if (line.contains("X")) {
+                                    putVariable = xOffset;
+                                } else {
+                                    putVariable = zOffset;
+                                }
+                                newVariableTable.put(putVariable, secondSegment.trim());
+                            }
+                        } // TODO - fix rebuild Daemon to not remove '-' character from non-numbers
+                        ++readCount;
+                    }
+                }
+            }
+
+            // replace previous config lines with current
+            for (String newVariable : newVariableTable.keySet()) {
+                configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
+            }
+
+            // write config to config.txt file
+            var builder = new StringBuilder();
+            for (String line : configContentLines) {
+                builder.append(line);
+                builder.append("\n");
+            }
+            System.out.println(builder.toString());
+//            FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+
+            // write to rebuild.txt the path to the assembly config.txt file
+//            FilesUtil.write(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // call rebuild daemon
+//            rebuild();
         });
         return button;
     }
@@ -227,7 +297,6 @@ public class Main {
     private static void writeBaseCoverChanges(String variableName) {
         var coverConfigContentLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
 
-        // TODO - also update the blob.L2_cover.SLDASM config.txt Hole x X/Z Offset
         // gets cover variables - user input and appends the line with the changed value to the lines array
         for (String userInputVariable : coverConfigVariableUserInputTable.keySet()) {
             if (userInputVariable.contains(variableName) &&
@@ -253,7 +322,7 @@ public class Main {
             builder.append("\n");
         }
         FilesUtil.write(builder.toString(), COVER_CONFIG_PATH);
-// TODO CALL BELOW TWO METHODS TWICE; once more for the *.SLDASM file - change rebuild daemon to search path for the extension, *.SLDPRT/*.SLDASM and switch to that model's active view before rebuilding - this is why it's necessary to cal it twice, once for each file rebuild
+
         // write to rebuild.txt which file to look for negative values in
         FilesUtil.write(COVER_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
