@@ -15,6 +15,7 @@ public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
     private static final Path COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.txt");
     private static final Path SQUARE_COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverSquare.txt");
+    private static final Path COVER_SHAPE_ASSEMBLY_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverConfig.txt");
     private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
@@ -119,9 +120,10 @@ public class Main {
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        // populate coverParamsButton() arguments and number by reading the selected shape's config.txt file and extracting relevant variables
-
         coverShapeSelection = shapeSelection;
+
+        // set cover selection assembly config
+        setCoverSelectionAssemblyConfig();
 
         // read cover config contents and set cover config variable table
         setCoverConfigVariableNameLineNumberTable(shapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH);
@@ -149,6 +151,33 @@ public class Main {
         window.setVisible(true);
     }
 
+    private static void setCoverSelectionAssemblyConfig() {
+        // get config lines
+        var configLines = FilesUtil.read(COVER_SHAPE_ASSEMBLY_CONFIG_PATH).split("\n");
+
+        // set new value from user cover shape selection
+        for (var i = 0; i < configLines.length; ++i) {
+            if (configLines[i].contains("Configuration") &&
+            !configLines[i].contains("IIF")) {
+                configLines[i] = "Configuration = " + (coverShapeSelection.contains("Square") ? "2" : "1");
+            }
+        }
+
+        // write new value to cover shape assembly config
+        var builder = new StringBuilder();
+        for (String line : configLines) {
+            builder.append(line);
+            builder.append("\n");
+        }
+        FilesUtil.write(builder.toString(), COVER_SHAPE_ASSEMBLY_CONFIG_PATH);
+
+        // set rebuild.txt app data to cover shape assembly config path
+        FilesUtil.write(COVER_SHAPE_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+        // call assembly rebuild daemon
+        rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+    }
+
     private static JButton selectMaterialButton() {
         var button = new JButton("Material");
         button.addActionListener(e -> displaySelectMaterialWindow());
@@ -173,10 +202,7 @@ public class Main {
         button.addActionListener(e -> writeMaterialConfig(material));
         return button;
     }
-// TODO - configure rebuild() to take ENUM argument representing the specific daemon to call
-    // TODO - write to rebuild.txt on material config selection
-    // TODO - finish having material config selection write to the appropriate config.txt file
-    // TODO - have C# daemon read the "Material"= # line and configure the *.SLDPRT file material accordingly
+
     private static void writeMaterialConfig(String material) {
         var configLines = FilesUtil.read(coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH).split("\n");
         for (var i = 0; i < configLines.length; ++i) {
@@ -276,8 +302,7 @@ public class Main {
             // get line - line number for variables pairs
             var variableLineNumberTable = new HashMap<String, Integer>();
 
-            // check if line doesn't contain an '@' character or "IIF"
-            // if not *.put(that line split("=")[0], index)
+            // <update this comment>
             var xOffset = "";
             var zOffset = "";
             var index = 0;
@@ -341,10 +366,9 @@ public class Main {
             // write new config
             FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
-            // TODO - extract assembly rebuild daemon from part rebuild daemon
             // call rebuild daemon
             writeAssemblyMatesToFlip(newVariableTable, configContentLines, variableLineNumberTable);
-            rebuild(DaemonProgram.REBUILD);
+            rebuild(DaemonProgram.ASSEMBLY_REBUILD);
         });
         return button;
     }
