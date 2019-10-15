@@ -28,7 +28,7 @@ public class Main {
             )
     );
     private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = true;
+    private static final boolean WRITEABLE = false;
 
     public static void main(String[] args) {
         // display main window
@@ -291,24 +291,24 @@ public class Main {
         button.addActionListener(e -> {
 
             // read blob.L2_cover.txt file and split into lines
-            var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
+            var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
             // get line - line number for variables pairs
-            var variableLineNumberTable = new HashMap<String, Integer>();
+            var coverAssemblyConfigVariableLineNumberTable = new HashMap<String, Integer>();
 
             // <update this comment>
             var xOffset = "";
             var zOffset = "";
             var index = 0;
-            for (String line : configContentLines) {
+            for (String line : coverAssemblyConfigLines) {
                 if (!line.contains("@") && !line.contains("IIF") &&
                 line.contains("Bool")) {
                     var boolVariable = line.split("=")[0];
-                    variableLineNumberTable.put(boolVariable, index);
+                    coverAssemblyConfigVariableLineNumberTable.put(boolVariable, index);
                 } else if (!line.contains("@") && !line.contains("IIF") &&
                 line.contains("Offset")) {
                     var offset = line.split("=")[0].trim();
-                    variableLineNumberTable.put(offset, index);
+                    coverAssemblyConfigVariableLineNumberTable.put(offset, index);
                     if (offset.contains("X")) {
                         xOffset = offset;
                     } else {
@@ -319,53 +319,92 @@ public class Main {
             }
             var userSelection = buttonGroup.getSelection().getActionCommand();
 
-            // define set of user input variables
-            var readCount = 0;
-            var newVariableTable = new HashMap<String, String>();
-            for (String variable : variableLineNumberTable.keySet()) {
+            // define user feature selection table
+            var coverAssemblyFeatureUserSelectionTable = new HashMap<String, String>();
+            for (String variable : coverAssemblyConfigVariableLineNumberTable.keySet()) {
                 if (!variable.contains("Offset")) {
                     var isSelected = variable.contains(userSelection) ? "1" : "0";
-                    newVariableTable.put(variable, isSelected);
-                } else {
-                    // if variable contains Offset - read from blob.cover.txt for the variableName hole number and get the hole # X/Z CA Offset values
-                    // put that in the value of the variable
-                    var baseCoverConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
-                    for (String line : baseCoverConfigLines) {
-                        var segments = line.split("=");
-                        var firstSegment = segments[0];
-                        var secondSegment = segments[1];
-                        if (firstSegment.contains(variableName) && firstSegment.contains("Offset") &&
-                                firstSegment.contains("CA")) {
-                            var putVariable = "";
-                            if (line.contains("X")) {
-                                putVariable = xOffset;
-                            } else {
-                                putVariable = zOffset;
+                    coverAssemblyFeatureUserSelectionTable.put(variable, isSelected);
+                }
+            }
+
+            // used only to help determine if a mate needs to be flipped
+            var coverAssemblyOffsetVariablesTable = new HashMap<String, Boolean>();
+            for (String variable : coverAssemblyConfigVariableLineNumberTable.keySet()) {
+                if (variable.contains("Offset")) {
+                    var currentAssemblyConfigLine = coverAssemblyConfigLines[coverAssemblyConfigVariableLineNumberTable.get(variable)];
+                    var currentLineIsNegative = currentAssemblyConfigLine.split("=")[1].contains("-");
+                    coverAssemblyOffsetVariablesTable.put(variable, currentLineIsNegative);
+                }
+            }
+
+            // if variable contains Offset - read from blob.cover.txt for the variableName hole number and get the hole # X/Z CA Offset values
+            // put that in the value of the variable
+            // FIXME - the dimension prefix for this is either a ! or ''
+            //  - if ! it means the current value of the offset has a different sign than the one read and so the rebuild daemon must
+            //  - rebuild the assembly once as '-' or '' opposite of current rebuild then write it as a positive
+            var baseCoverConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+            for (String line : baseCoverConfigLines) {
+                if (line.contains("CA") && !line.contains("IIF") &&
+                !line.contains("@")) {
+                    var lineSplitCA = line.split("CA");
+                    var xYFeature = lineSplitCA[1].split("=")[0].replace("\"", "").trim();
+                    var holeNumber = lineSplitCA[0].replace("\"", "").trim();
+                    var partConfigFeatureIsNegative = lineSplitCA[1].split("=")[1].contains("-");
+
+                    for (String offsetVariable : coverAssemblyOffsetVariablesTable.keySet()) {
+                        if (offsetVariable.contains(holeNumber) && offsetVariable.contains(xYFeature)) {
+                            var assemblyOffsetIsNegative = coverAssemblyOffsetVariablesTable.get(offsetVariable);
+                            var lineSegments = line.split("=");
+                            var variableDeclaration = lineSegments[0];
+                            var variableValue = lineSegments[1].replace("-", "").trim();
+                            if (!(partConfigFeatureIsNegative && assemblyOffsetIsNegative ||
+                            !partConfigFeatureIsNegative && !assemblyOffsetIsNegative)) {
+                                variableValue = "!" + variableValue;
                             }
-                            newVariableTable.put(putVariable, secondSegment.trim());
+                            if (variableDeclaration.contains(variableName) && variableDeclaration.contains("Offset") &&
+                                    variableDeclaration.contains("CA")) {
+                                var putVariable = "";
+                                if (line.contains("X")) {
+                                    putVariable = xOffset;
+                                } else {
+                                    putVariable = zOffset;
+                                }
+                                coverAssemblyFeatureUserSelectionTable.put(putVariable, variableValue);
+                            }
                         }
                     }
                 }
             }
 
+            // generate mates to write to rebuild.txt app data - do this looking for any ! appended to offset features
+            // add all dimensions @Distance4 for example but just the Distance<#> and write to app data
+            // replace all occurrences of ! to '' - all values written to the assembly config must be positive
+            var rebuildAppData = new StringBuilder();
+            rebuildAppData.append(COVER_ASSEMBLY_CONFIG_PATH.toString());
+            rebuildAppData.append("\n");
+            for (String variable : coverAssemblyFeatureUserSelectionTable.keySet()) {
+                if (coverAssemblyFeatureUserSelectionTable.get(variable).contains("!")) {
+
+                }
+            }
+
             // update blob.L2_config.txt lines
-            for (String variable : newVariableTable.keySet()) {
-                var lineNumber = variableLineNumberTable.get(variable);
-                var newLine = variable + "= " + newVariableTable.get(variable);
-                configContentLines[lineNumber] = newLine;
+            for (String variable : coverAssemblyFeatureUserSelectionTable.keySet()) {
+                var lineNumber = coverAssemblyConfigVariableLineNumberTable.get(variable);
+                var newLine = variable + "= " + coverAssemblyFeatureUserSelectionTable.get(variable);
+                coverAssemblyConfigLines[lineNumber] = newLine;
             }
 
             // write config to config.txt file
             var builder = new StringBuilder();
-            for (String line : configContentLines) {
+            for (String line : coverAssemblyConfigLines) {
                 builder.append(line);
                 builder.append("\n");
             }
 
             // write new config
             writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
-
-            writeAssemblyMatesToFlip(newVariableTable, configContentLines, variableLineNumberTable);
 
             rebuild(DaemonProgram.ASSEMBLY_REBUILD);
         });
@@ -458,27 +497,6 @@ public class Main {
 
         // call auto-rebuild daemon
         rebuild(DaemonProgram.REBUILD);
-    }
-
-    private static void writeAssemblyMatesToFlip(HashMap<String, String> newVariableTable,
-                                        String[] configContentLines,
-                                        HashMap<String, Integer> variableLineNumberTable) {
-        var rebuildText = new StringBuilder();
-        rebuildText.append(COVER_ASSEMBLY_CONFIG_PATH.toString());
-        rebuildText.append("\n");
-        for (String newVariable : newVariableTable.keySet()) {
-            if (newVariableTable.get(newVariable).contains("-")) {
-                for (String configContentLine : configContentLines) {
-                    if (configContentLine.contains(newVariable) && configContentLine.contains("@")) {
-                        rebuildText.append(configContentLine.split("=")[0].split("@")[1].replace("\"", ""));
-                        rebuildText.append("\n");
-                    }
-                }
-                configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable).replace("-", "");
-            } else
-                configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
-        }
-        writeToConfig(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
     }
 
     private static void rebuild(DaemonProgram program) {
