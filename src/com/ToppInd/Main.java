@@ -77,15 +77,7 @@ public class Main {
 
     private static JButton buildDrawingButton() {
         var button = new JButton("Build Drawing");
-        button.addActionListener(e -> {
-            try {
-                var buildDrawingDaemonProcess = new ProcessBuilder("cmd.exe", "/c", "AutoPrefabDaemon.bat").start();
-                buildDrawingDaemonProcess.waitFor();
-                buildDrawingDaemonProcess.destroy();
-            } catch (IOException | InterruptedException ex) {
-                ex.printStackTrace();
-            }
-        });
+        button.addActionListener(e -> rebuild(DaemonProgram.BUILD_DRAWING));
         return button;
     }
 
@@ -290,15 +282,16 @@ public class Main {
 
         window.setVisible(true);
     }
-
+    // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
+    // TODO - update assembly rebuild daemon so it can make the correct assembly file active - currently have to manually do this - also make it open that file if it isn't
+    // TODO - do the above for each daemon - material config daemon, and the rest
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
-            // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
+
             // read blob.L2_cover.txt file and split into lines
             var configContentLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
-// FIXME - for any write to *.txt config file - write 1 of three states; ! - rebuild as negate - write negate; "" - rebuild write positive/don't overwrite; (-) - rebuild positive write negative
-//  - this way it's possible to determine if the negation is versus a prior negative state or not -
+
             // get line - line number for variables pairs
             var variableLineNumberTable = new HashMap<String, Integer>();
 
@@ -415,8 +408,23 @@ public class Main {
                 } else if (coverConfigContentLines[variableLineNumber].contains("deg")) {
                     lineSuffix = "deg";
                 }
-                var newLine = userInputVariable + "= " + coverConfigVariableUserInputTable.get(userInputVariable) +
-                        lineSuffix;
+                // set variable dimension prefix based on if user input positive/negative sign opposes the current negation
+                var negationPrefix = "";
+                var currentLineDimensionIsNegative = coverConfigContentLines[variableLineNumber].split("=")[1].contains("-");
+                var userInputDimensionIsNegative = coverConfigVariableUserInputTable.get(userInputVariable).contains("-");
+                if (currentLineDimensionIsNegative && userInputDimensionIsNegative ||
+                        !currentLineDimensionIsNegative && !userInputDimensionIsNegative) {
+                    negationPrefix = currentLineDimensionIsNegative ? "-" : "";
+                } else {
+                    negationPrefix = "!" + (currentLineDimensionIsNegative ? "-" : "");
+                }
+
+                var userVariable = coverConfigVariableUserInputTable.get(userInputVariable);
+                if (userVariable.contains("-")) {
+                    userVariable = userVariable.replace("-", "");
+                }
+
+                var newLine = userInputVariable + "= " + negationPrefix + userVariable + lineSuffix;
                 coverConfigContentLines[variableLineNumber] = newLine;
             }
         }
@@ -432,7 +440,7 @@ public class Main {
         // write to rebuild.txt which file to look for negative values in
         FilesUtil.write(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
-        // call C# auto-rebuild daemon
+        // call auto-rebuild daemon
         rebuild(DaemonProgram.REBUILD);
     }
 
