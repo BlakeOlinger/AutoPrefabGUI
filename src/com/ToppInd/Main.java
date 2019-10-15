@@ -27,8 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
-    private static final boolean WRITEABLE = true;
+    private static final boolean REBUILDABLE = false;
+    private static final boolean WRITEABLE = false;
 
     public static void main(String[] args) {
         // display main window
