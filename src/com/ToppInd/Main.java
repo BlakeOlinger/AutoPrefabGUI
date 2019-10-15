@@ -27,6 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
+    private static final boolean REBUILDABLE = false;
+    private static final boolean WRITEABLE = true;
 
     public static void main(String[] args) {
         // display main window
@@ -161,10 +163,10 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-        FilesUtil.write(builder.toString(), COVER_SHAPE_ASSEMBLY_CONFIG_PATH);
+        writeToConfig(builder.toString(), COVER_SHAPE_ASSEMBLY_CONFIG_PATH);
 
         // set rebuild.txt app data to cover shape assembly config path
-        FilesUtil.write(COVER_SHAPE_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        writeToConfig(COVER_SHAPE_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
         // call assembly rebuild daemon
         rebuild(DaemonProgram.ASSEMBLY_REBUILD);
@@ -210,11 +212,10 @@ public class Main {
         }
 
         // write material config to selected config.txt file
-        FilesUtil.write(builder.toString(), coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH);
+        writeToConfig(builder.toString(), getCoverConfigPath());
 
         // write selected config.txt path to rebuild.txt app data
-        var path = coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
-        FilesUtil.write(path.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
         // call rebuild for AutoMaterialConfig.appref-ms
         rebuild(DaemonProgram.MATERIAL_CONFIG);
@@ -323,30 +324,35 @@ public class Main {
             var newVariableTable = new HashMap<String, String>();
             for (String variable : variableLineNumberTable.keySet()) {
                 if (!variable.contains("Offset")) {
-                    newVariableTable.put(variable, variable.contains(userSelection) ? "1" : "0");
+                    var isSelected = variable.contains(userSelection) ? "1" : "0";
+                    newVariableTable.put(variable, isSelected);
                 } else {
                     // if variable contains Offset - read from blob.cover.txt for the variableName hole number and get the hole # X/Z CA Offset values
                     // put that in the value of the variable
-                    if (readCount == 0) {
-                        var baseCoverConfigLines = FilesUtil.read(COVER_CONFIG_PATH).split("\n");
-                        for (String line : baseCoverConfigLines) {
-                            var segments = line.split("=");
-                            var firstSegment = segments[0];
-                            var secondSegment = segments[1];
-                            if (firstSegment.contains(variableName) && firstSegment.contains("Offset") &&
-                                    firstSegment.contains("CA")) {
-                                var putVariable = "";
-                                if (line.contains("X")) {
-                                    putVariable = xOffset;
-                                } else {
-                                    putVariable = zOffset;
-                                }
-                                newVariableTable.put(putVariable, secondSegment.trim());
+                    var baseCoverConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+                    for (String line : baseCoverConfigLines) {
+                        var segments = line.split("=");
+                        var firstSegment = segments[0];
+                        var secondSegment = segments[1];
+                        if (firstSegment.contains(variableName) && firstSegment.contains("Offset") &&
+                                firstSegment.contains("CA")) {
+                            var putVariable = "";
+                            if (line.contains("X")) {
+                                putVariable = xOffset;
+                            } else {
+                                putVariable = zOffset;
                             }
+                            newVariableTable.put(putVariable, secondSegment.trim());
                         }
-                        ++readCount;
                     }
                 }
+            }
+
+            // update blob.L2_config.txt lines
+            for (String variable : newVariableTable.keySet()) {
+                var lineNumber = variableLineNumberTable.get(variable);
+                var newLine = variable + "= " + newVariableTable.get(variable);
+                configContentLines[lineNumber] = newLine;
             }
 
             // write config to config.txt file
@@ -357,34 +363,44 @@ public class Main {
             }
 
             // write new config
-            FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+            writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
-            // call rebuild daemon
             writeAssemblyMatesToFlip(newVariableTable, configContentLines, variableLineNumberTable);
+
             rebuild(DaemonProgram.ASSEMBLY_REBUILD);
         });
         return button;
     }
 
-    private static JRadioButton[] holeAssemblyConfigRadios() {
-        var pf150s0deg = new JRadioButton("PF150S 0deg");
-        pf150s0deg.setActionCommand("PF150S 0deg");
-        var pf200t90deg = new JRadioButton("PF200T 90deg");
-        pf200t90deg.setActionCommand("PF200T 90deg");
-        var ecg2 = new JRadioButton("ECG 2 Hole");
-        ecg2.setActionCommand("ECG 2 Hole");
-        var inspection10in45degBC = new JRadioButton("10in Inspection Plate 45deg BC");
-        inspection10in45degBC.setActionCommand("10in Inspection Plate 45deg BC");
-        var none = new JRadioButton("none");
-        none.setActionCommand("none");
+    private static void writeToConfig(String content, Path path) {
+        if (WRITEABLE)
+            FilesUtil.write(content, path);
+    }
 
-        return new JRadioButton[]{
-                pf150s0deg,
-                pf200t90deg,
-                ecg2,
-                inspection10in45degBC,
-                none
+    private static Path getCoverConfigPath() {
+        return coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
+    }
+
+    private static JRadioButton[] holeAssemblyConfigRadios() {
+        var featureArray = new String[]{
+                "PF150S 0deg",
+                "PF200T 90deg",
+                "ECG 2 Hole",
+                "10in Inspection Plate 45deg BC",
+                "PF200S 0deg",
+                "PF200S 90deg",
+                "none"
+
         };
+        var radioButtonArray = new JRadioButton[featureArray.length];
+        var index = 0;
+        for (String feature : featureArray) {
+            radioButtonArray[index] = new JRadioButton(feature);
+            radioButtonArray[index].setActionCommand(feature);
+            ++index;
+        }
+
+        return radioButtonArray;
     }
 
     private static JButton baseCoverParamsBuildButton(String variableName) {
@@ -435,10 +451,10 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-        FilesUtil.write(builder.toString(), coverConfigPath);
+        writeToConfig(builder.toString(), coverConfigPath);
 
         // write to rebuild.txt which file to look for negative values in
-        FilesUtil.write(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
         // call auto-rebuild daemon
         rebuild(DaemonProgram.REBUILD);
@@ -462,18 +478,19 @@ public class Main {
             } else
                 configContentLines[variableLineNumberTable.get(newVariable)] = newVariable + "= " + newVariableTable.get(newVariable);
         }
-
-        FilesUtil.write(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        writeToConfig(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
     }
 
     private static void rebuild(DaemonProgram program) {
-        // write to rebuild.txt the path to the assembly config.txt file
-        try {
-            var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", program.getProgram()).start();
-            rebuildDaemonProcess.waitFor();
-            rebuildDaemonProcess.destroy();
-        } catch (InterruptedException | IOException e) {
-            e.printStackTrace();
+        if (REBUILDABLE) {
+            // write to rebuild.txt the path to the assembly config.txt file
+            try {
+                var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", program.getProgram()).start();
+                rebuildDaemonProcess.waitFor();
+                rebuildDaemonProcess.destroy();
+            } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
