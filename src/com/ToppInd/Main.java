@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
@@ -19,6 +20,12 @@ public class Main {
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
+    private static final HashMap<String, String> MATERIAL_CONFIG_TABLE = new HashMap<>(
+            Map.of(
+                    "ASTM A36 Steel", "0",
+                    "6061 Alloy", "1"
+            )
+    );
 
     public static void main(String[] args) {
         // display main window
@@ -166,16 +173,33 @@ public class Main {
         button.addActionListener(e -> writeMaterialConfig(material));
         return button;
     }
-
+// TODO - configure rebuild() to take ENUM argument representing the specific daemon to call
+    // TODO - write to rebuild.txt on material config selection
     // TODO - finish having material config selection write to the appropriate config.txt file
     // TODO - have C# daemon read the "Material"= # line and configure the *.SLDPRT file material accordingly
     private static void writeMaterialConfig(String material) {
         var configLines = FilesUtil.read(coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH).split("\n");
         for (var i = 0; i < configLines.length; ++i) {
             if (configLines[i].split("=")[0].contains("Material")) {
-                System.out.println(configLines[i]);
+                configLines[i] = configLines[i].replace(configLines[i].split("=")[1], " " + MATERIAL_CONFIG_TABLE.get(material));
             }
         }
+
+        var builder = new StringBuilder();
+        for (String line : configLines) {
+            builder.append(line);
+            builder.append("\n");
+        }
+
+        // write material config to selected config.txt file
+        FilesUtil.write(builder.toString(), coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH);
+
+        // write selected config.txt path to rebuild.txt app data
+        var path = coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
+        FilesUtil.write(path.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+        // call rebuild for AutoMaterialConfig.appref-ms
+        rebuild(DaemonProgram.MATERIAL_CONFIG);
     }
 
     private static JButton coverParamsButton(String label, ActionListener actionListener) {
@@ -317,9 +341,10 @@ public class Main {
             // write new config
             FilesUtil.write(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
+            // TODO - extract assembly rebuild daemon from part rebuild daemon
             // call rebuild daemon
             writeAssemblyMatesToFlip(newVariableTable, configContentLines, variableLineNumberTable);
-            rebuild();
+            rebuild(DaemonProgram.REBUILD);
         });
         return button;
     }
@@ -384,7 +409,7 @@ public class Main {
         FilesUtil.write(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
         // call C# auto-rebuild daemon
-        rebuild();
+        rebuild(DaemonProgram.REBUILD);
     }
 
     private static void writeAssemblyMatesToFlip(HashMap<String, String> newVariableTable,
@@ -409,10 +434,10 @@ public class Main {
         FilesUtil.write(rebuildText.toString(), REBUILD_DAEMON_APP_DATA_PATH);
     }
 
-    private static void rebuild() {
+    private static void rebuild(DaemonProgram program) {
         // write to rebuild.txt the path to the assembly config.txt file
         try {
-            var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", "AutoRebuildPart.appref-ms").start();
+            var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", program.getProgram()).start();
             rebuildDaemonProcess.waitFor();
             rebuildDaemonProcess.destroy();
         } catch (InterruptedException | IOException e) {
