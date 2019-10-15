@@ -27,8 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = false;
+    private static final boolean REBUILDABLE = true;
+    private static final boolean WRITEABLE = true;
 
     public static void main(String[] args) {
         // display main window
@@ -283,9 +283,10 @@ public class Main {
 
         window.setVisible(true);
     }
-    // TODO - include variableName in the section that updates lines so that only the correct hole # is updated
-    // TODO - update assembly rebuild daemon so it can make the correct assembly file active - currently have to manually do this - also make it open that file if it isn't
-    // TODO - do the above for each daemon - material config daemon, and the rest
+
+    // FIXME - BIG ONE - any dimension can never be negative as a stable state - it can only be negative for a single rebuild
+    //  - then it must be overwritten to a positive value - this means there has to be an external variable for each
+    //  - dimension that has to be able to be negative with every negation being based on those variables
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
@@ -340,9 +341,6 @@ public class Main {
 
             // if variable contains Offset - read from blob.cover.txt for the variableName hole number and get the hole # X/Z CA Offset values
             // put that in the value of the variable
-            // FIXME - the dimension prefix for this is either a ! or ''
-            //  - if ! it means the current value of the offset has a different sign than the one read and so the rebuild daemon must
-            //  - rebuild the assembly once as '-' or '' opposite of current rebuild then write it as a positive
             var baseCoverConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
             for (String line : baseCoverConfigLines) {
                 if (line.contains("CA") && !line.contains("IIF") &&
@@ -357,7 +355,7 @@ public class Main {
                             var assemblyOffsetIsNegative = coverAssemblyOffsetVariablesTable.get(offsetVariable);
                             var lineSegments = line.split("=");
                             var variableDeclaration = lineSegments[0];
-                            var variableValue = lineSegments[1].replace("-", "").trim();
+                            var variableValue = lineSegments[1].trim();
                             if (!(partConfigFeatureIsNegative && assemblyOffsetIsNegative ||
                             !partConfigFeatureIsNegative && !assemblyOffsetIsNegative)) {
                                 variableValue = "!" + variableValue;
@@ -377,6 +375,8 @@ public class Main {
                 }
             }
 
+            // FIXME - need an overall negative state watcher to determine if the assembly config offset is negative despite its value always being positive
+            //  - otherwise it will write the dimensions to app data erroneously
             // generate mates to write to rebuild.txt app data - do this looking for any ! appended to offset features
             // add all dimensions @Distance4 for example but just the Distance<#> and write to app data
             // replace all occurrences of ! to '' - all values written to the assembly config must be positive
@@ -385,9 +385,21 @@ public class Main {
             rebuildAppData.append("\n");
             for (String variable : coverAssemblyFeatureUserSelectionTable.keySet()) {
                 if (coverAssemblyFeatureUserSelectionTable.get(variable).contains("!")) {
+                    var variableSegments = variable.split(" ");
+                    var variableHoleNumber = variableSegments[1].trim();
+                    var variableXZ = variableSegments[2].trim();
 
+                    for (String line : coverAssemblyConfigLines) {
+                        if (line.contains("@") && line.contains(variableHoleNumber) &&
+                                line.contains(variableXZ)) {
+                            var configLineDistance = line.split("=")[0].split("@")[1].replace("\"", "");
+                            rebuildAppData.append(configLineDistance);
+                            rebuildAppData.append("\n");
+                        }
+                    }
                 }
             }
+            writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
             // update blob.L2_config.txt lines
             for (String variable : coverAssemblyFeatureUserSelectionTable.keySet()) {
