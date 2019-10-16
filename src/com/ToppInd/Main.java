@@ -580,7 +580,7 @@ public class Main {
             builder.append("\n");
         }
         writeToConfig(builder.toString(), coverConfigPath);
-        System.out.println(builder);
+
         // write path app data to rebuild.txt
         writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
