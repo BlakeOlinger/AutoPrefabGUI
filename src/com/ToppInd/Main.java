@@ -27,8 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = false;
+    private static final boolean REBUILDABLE = true;
+    private static final boolean WRITEABLE = true;
 
     public static void main(String[] args) {
         // display main window
@@ -371,7 +371,8 @@ public class Main {
                                 !assemblyIsNegative && !partIsNegative)) {
                             var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
                             for (String line : coverAssemblyConfigLines) {
-                                if (line.contains("@") && line.contains(XorZ)) {
+                                if (line.contains("@") && line.contains(XorZ) &&
+                                        line.contains(variableName)) {
                                     var dimension = line.split("@")[1].split("=")[0].replace("\"", "").trim();
                                     rebuildAppData.append(dimension);
                                     rebuildAppData.append("\n");
