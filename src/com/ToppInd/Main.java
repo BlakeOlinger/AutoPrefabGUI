@@ -27,8 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = false;
+    private static final boolean REBUILDABLE = true;
+    private static final boolean WRITEABLE = true;
 
     public static void main(String[] args) {
         // display main window
@@ -283,10 +283,7 @@ public class Main {
 
         window.setVisible(true);
     }
-
-    // FIXME - BIG ONE - any dimension can never be negative as a stable state - it can only be negative for a single rebuild
-    //  - then it must be overwritten to a positive value - this means there has to be an external variable for each
-    //  - dimension that has to be able to be negative with every negation being based on those variables
+    // TODO - make assembly confirm write dimensions to flip based on if user input is opposite of current negation state
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
@@ -475,23 +472,10 @@ public class Main {
                 } else if (coverConfigContentLines[variableLineNumber].contains("deg")) {
                     lineSuffix = "deg";
                 }
-                // set variable dimension prefix based on if user input positive/negative sign opposes the current negation
-                var negationPrefix = "";
-                var currentLineDimensionIsNegative = coverConfigContentLines[variableLineNumber].split("=")[1].contains("-");
-                var userInputDimensionIsNegative = coverConfigVariableUserInputTable.get(userInputVariable).contains("-");
-                if (currentLineDimensionIsNegative && userInputDimensionIsNegative ||
-                        !currentLineDimensionIsNegative && !userInputDimensionIsNegative) {
-                    negationPrefix = currentLineDimensionIsNegative ? "-" : "";
-                } else {
-                    negationPrefix = "!" + (currentLineDimensionIsNegative ? "-" : "");
-                }
 
                 var userVariable = coverConfigVariableUserInputTable.get(userInputVariable);
-                if (userVariable.contains("-")) {
-                    userVariable = userVariable.replace("-", "");
-                }
 
-                var newLine = userInputVariable + "= " + negationPrefix + userVariable + lineSuffix;
+                var newLine = userInputVariable + "= " + userVariable + lineSuffix;
                 coverConfigContentLines[variableLineNumber] = newLine;
             }
         }
@@ -504,7 +488,7 @@ public class Main {
         }
         writeToConfig(builder.toString(), coverConfigPath);
 
-        // write to rebuild.txt which file to look for negative values in
+        // write path app data to rebuild.txt
         writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
         // call auto-rebuild daemon
