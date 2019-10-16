@@ -27,7 +27,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
+    private static final boolean REBUILDABLE = false;
     private static final boolean WRITEABLE = true;
 
     public static void main(String[] args) {
@@ -52,7 +52,7 @@ public class Main {
         var index = 0;
         // sort by line NOT contains @ or "IIF" - increment index each line - if NOT HashMap.put()
         for (String line : coverConfigLines) {
-            if (!line.contains("@") && !line.contains("IIF")){
+            if (!line.contains("@") && !line.contains("IIF") && !line.contains("Negative")){
                 // get variable name from line
                 var variableName = line.split("=")[0];
                 coverConfigVariableNameLineNumberTable.put(variableName, index);
@@ -283,7 +283,7 @@ public class Main {
 
         window.setVisible(true);
     }
-    // TODO - make assembly confirm write dimensions to flip based on if user input is opposite of current negation state
+
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
@@ -291,119 +291,103 @@ public class Main {
             // read blob.L2_cover.txt file and split into lines
             var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
-            // get line - line number for variables pairs
-            var coverAssemblyConfigVariableLineNumberTable = new HashMap<String, Integer>();
+            // get user selection - forces default "none" if nothing is selected on confirm
+            var userSelection = "";
+            try {
+                userSelection = buttonGroup.getSelection().getActionCommand();
+            } catch (NullPointerException exception) {
+                userSelection = "none";
+            }
 
-            // <update this comment>
-            var xOffset = "";
-            var zOffset = "";
+            // populate a line number - feature bool map
+            var lineNumberFeatureBoolTable = new HashMap<Integer, String>();
             var index = 0;
             for (String line : coverAssemblyConfigLines) {
-                if (!line.contains("@") && !line.contains("IIF") &&
-                line.contains("Bool")) {
-                    var boolVariable = line.split("=")[0];
-                    coverAssemblyConfigVariableLineNumberTable.put(boolVariable, index);
-                } else if (!line.contains("@") && !line.contains("IIF") &&
-                line.contains("Offset")) {
-                    var offset = line.split("=")[0].trim();
-                    coverAssemblyConfigVariableLineNumberTable.put(offset, index);
-                    if (offset.contains("X")) {
-                        xOffset = offset;
-                    } else {
-                        zOffset = offset;
-                    }
+                if (line.contains("Bool") && !line.contains("IIF")) {
+                    lineNumberFeatureBoolTable.put(index, line);
                 }
                 ++index;
             }
-            var userSelection = buttonGroup.getSelection().getActionCommand();
 
-            // define user feature selection table
-            var coverAssemblyFeatureUserSelectionTable = new HashMap<String, String>();
-            for (String variable : coverAssemblyConfigVariableLineNumberTable.keySet()) {
-                if (!variable.contains("Offset")) {
-                    var isSelected = variable.contains(userSelection) ? "1" : "0";
-                    coverAssemblyFeatureUserSelectionTable.put(variable, isSelected);
-                }
-            }
+            // set the bool state of the hole (variable name) and feature selected
+            // for the assembly config.txt file - writes later
+            for (int lineNumber : lineNumberFeatureBoolTable.keySet()) {
+                var line = lineNumberFeatureBoolTable.get(lineNumber);
+                // check if line in assembly config.txt contains user selected hole number
+                if (line.contains(variableName) && line.contains("Bool") &&
+                !line.contains("IIF")) {
+                    if (line.contains(userSelection)) {
+                        var featureSelectedVariable = line.split("=")[1].trim();
+                        var isFeatureCurrentlySelected = featureSelectedVariable.contains("1");
 
-            // used only to help determine if a mate needs to be flipped
-            var coverAssemblyOffsetVariablesTable = new HashMap<String, Boolean>();
-            for (String variable : coverAssemblyConfigVariableLineNumberTable.keySet()) {
-                if (variable.contains("Offset")) {
-                    var currentAssemblyConfigLine = coverAssemblyConfigLines[coverAssemblyConfigVariableLineNumberTable.get(variable)];
-                    var currentLineIsNegative = currentAssemblyConfigLine.split("=")[1].contains("-");
-                    coverAssemblyOffsetVariablesTable.put(variable, currentLineIsNegative);
-                }
-            }
-
-            // if variable contains Offset - read from blob.cover.txt for the variableName hole number and get the hole # X/Z CA Offset values
-            // put that in the value of the variable
-            var baseCoverConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
-            for (String line : baseCoverConfigLines) {
-                if (line.contains("CA") && !line.contains("IIF") &&
-                !line.contains("@")) {
-                    var lineSplitCA = line.split("CA");
-                    var xYFeature = lineSplitCA[1].split("=")[0].replace("\"", "").trim();
-                    var holeNumber = lineSplitCA[0].replace("\"", "").trim();
-                    var partConfigFeatureIsNegative = lineSplitCA[1].split("=")[1].contains("-");
-
-                    for (String offsetVariable : coverAssemblyOffsetVariablesTable.keySet()) {
-                        if (offsetVariable.contains(holeNumber) && offsetVariable.contains(xYFeature)) {
-                            var assemblyOffsetIsNegative = coverAssemblyOffsetVariablesTable.get(offsetVariable);
-                            var lineSegments = line.split("=");
-                            var variableDeclaration = lineSegments[0];
-                            var variableValue = lineSegments[1].trim();
-                            if (!(partConfigFeatureIsNegative && assemblyOffsetIsNegative ||
-                            !partConfigFeatureIsNegative && !assemblyOffsetIsNegative)) {
-                                variableValue = "!" + variableValue;
-                            }
-                            if (variableDeclaration.contains(variableName) && variableDeclaration.contains("Offset") &&
-                                    variableDeclaration.contains("CA")) {
-                                var putVariable = "";
-                                if (line.contains("X")) {
-                                    putVariable = xOffset;
-                                } else {
-                                    putVariable = zOffset;
-                                }
-                                coverAssemblyFeatureUserSelectionTable.put(putVariable, variableValue);
-                            }
+                        // if feature isn't selected set it to selected
+                        if (!isFeatureCurrentlySelected) {
+                            var newLine = coverAssemblyConfigLines[lineNumber].split("=")[0].trim() + "= 1";
+                            coverAssemblyConfigLines[lineNumber] = newLine;
                         }
+                        // set rest to 0
+                    } else {
+                        var newLine = coverAssemblyConfigLines[lineNumber].split("=")[0].trim() + "= 0";
+                        coverAssemblyConfigLines[lineNumber] = newLine;
                     }
                 }
             }
 
-            // FIXME - need an overall negative state watcher to determine if the assembly config offset is negative despite its value always being positive
-            //  - otherwise it will write the dimensions to app data erroneously
-            // generate mates to write to rebuild.txt app data - do this looking for any ! appended to offset features
-            // add all dimensions @Distance4 for example but just the Distance<#> and write to app data
-            // replace all occurrences of ! to '' - all values written to the assembly config must be positive
+            // read part config.txt for the variable name (hole number) and X/Z negative state - read only
+            // only care about the current variable name (hole number) X/Z
+            var partConfigXZNegationStateTable = new HashMap<String, Boolean>();
+            var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+            for (String line : partConfigLines) {
+                if (line.contains("Negative") && line.contains(variableName)) {
+                    var isNegative = line.split("=")[1].contains("1");
+
+                    partConfigXZNegationStateTable.put(line, isNegative);
+                }
+            }
+
+            // populate assembly config X/Z negation information for variable name (hole number) - read only
+            var assemblyConfigXZNegationTable = new HashMap<String, Boolean>();
+            for (String line : coverAssemblyConfigLines) {
+                if (line.contains("Negative")) {
+                    var isNegative = line.split("=")[1].contains("1");
+
+                    assemblyConfigXZNegationTable.put(line, isNegative);
+                }
+            }
+
+            // if part/assembly negation do not match make that hole and all its dimensions
+            // added to app data to flip
             var rebuildAppData = new StringBuilder();
-            rebuildAppData.append(COVER_ASSEMBLY_CONFIG_PATH.toString());
+            rebuildAppData.append(COVER_ASSEMBLY_CONFIG_PATH);
             rebuildAppData.append("\n");
-            for (String variable : coverAssemblyFeatureUserSelectionTable.keySet()) {
-                if (coverAssemblyFeatureUserSelectionTable.get(variable).contains("!")) {
-                    var variableSegments = variable.split(" ");
-                    var variableHoleNumber = variableSegments[1].trim();
-                    var variableXZ = variableSegments[2].trim();
+            for (String assemblyDimension : assemblyConfigXZNegationTable.keySet()) {
+                for (String partDimension : partConfigXZNegationStateTable.keySet()) {
+                    if (assemblyDimension.contains("X") && partDimension.contains("X") ||
+                            assemblyDimension.contains("Z") && partDimension.contains("Z")) {
+                        var assemblyIsNegative = assemblyDimension.split("=")[1].contains("1");
+                        var partIsNegative = partDimension.split("=")[1].contains("1");
 
-                    for (String line : coverAssemblyConfigLines) {
-                        if (line.contains("@") && line.contains(variableHoleNumber) &&
-                                line.contains(variableXZ)) {
-                            var configLineDistance = line.split("=")[0].split("@")[1].replace("\"", "");
-                            rebuildAppData.append(configLineDistance);
-                            rebuildAppData.append("\n");
+                        if (!(assemblyIsNegative && partIsNegative ||
+                                !assemblyIsNegative && !partIsNegative)) {
+                            var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
+                            for (String line : coverAssemblyConfigLines) {
+                                if (line.contains("@") && line.contains(XorZ)) {
+                                    var dimension = line.split("@")[1].split("=")[0].replace("\"", "").trim();
+                                    rebuildAppData.append(dimension);
+                                    rebuildAppData.append("\n");
+                                }
+                            }
                         }
                     }
                 }
             }
-            writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
-            // update blob.L2_config.txt lines
-            for (String variable : coverAssemblyFeatureUserSelectionTable.keySet()) {
-                var lineNumber = coverAssemblyConfigVariableLineNumberTable.get(variable);
-                var newLine = variable + "= " + coverAssemblyFeatureUserSelectionTable.get(variable);
-                coverAssemblyConfigLines[lineNumber] = newLine;
-            }
+            // TODO - on selection for that given hole number (variable name) fetch the corresponding
+            //  - hole number X and Z CA offset values from the part config.txt file and set the assembly
+            //  - config file corresponding hole number X Z offset values to those
+
+            // write app data
+            writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
             // write config to config.txt file
             var builder = new StringBuilder();

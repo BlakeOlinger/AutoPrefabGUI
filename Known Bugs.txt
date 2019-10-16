@@ -1,0 +1,4 @@
+- KNOWN BUGS -
+
+// - some problem with blob.ecg_2hol1.SLDASM file when used in an outer assembly
+   - upon suppress/unsuppress it requires a "don't save" prompt - if save is selected SW crashes
