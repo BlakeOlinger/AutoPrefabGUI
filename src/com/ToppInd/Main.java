@@ -27,8 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
-    private static final boolean WRITEABLE = true;
+    private static final boolean REBUILDABLE = false;
+    private static final boolean WRITEABLE = false;
 
     public static void main(String[] args) {
         // display main window
@@ -268,7 +268,7 @@ public class Main {
         window.setLayout(new FlowLayout());
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        var radioButtons = holeAssemblyConfigRadios();
+        var radioButtons = holeAssemblyConfigRadios(variableName);
         var buttonGroup = new ButtonGroup();
 
         for (JRadioButton radioButton : radioButtons) {
@@ -452,17 +452,26 @@ public class Main {
         return coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
     }
 
-    private static JRadioButton[] holeAssemblyConfigRadios() {
-        var featureArray = new String[]{
-                "PF150S 0deg",
-                "PF200T 90deg",
-                "ECG 2 Hole",
-                "10in Inspection Plate 45deg BC",
-                "PF200S 0deg",
-                "PF200S 90deg",
-                "none"
+    private static JRadioButton[] holeAssemblyConfigRadios(String variableName) {
+        var featureStringList = new StringBuilder();
+        featureStringList.append("none");
+        featureStringList.append("!");
+        var assemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
-        };
+        for (String line : assemblyConfigLines) {
+            if (line.contains(variableName) && line.contains("Bool") &&
+            !line.contains("IIF")) {
+                var feature = line.split(variableName)[1].split("=")[0]
+                        .replace("\"", "")
+                        .replace("Bool", "")
+                        .trim();
+                featureStringList.append(feature);
+                featureStringList.append("!");
+            }
+        }
+
+        var featureArray = featureStringList.toString().split("!");
+
         var radioButtonArray = new JRadioButton[featureArray.length];
         var index = 0;
         for (String feature : featureArray) {
