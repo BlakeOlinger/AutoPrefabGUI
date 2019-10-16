@@ -27,7 +27,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
+    private static final boolean REBUILDABLE = true;
     private static final boolean WRITEABLE = true;
 
     public static void main(String[] args) {
@@ -382,14 +382,53 @@ public class Main {
                 }
             }
 
-            // TODO - on selection for that given hole number (variable name) fetch the corresponding
-            //  - hole number X and Z CA offset values from the part config.txt file and set the assembly
-            //  - config file corresponding hole number X Z offset values to those
+            // get part config X Z offsets for the hole number (variable name)
+            var partConfigOffsetTable = new HashMap<String, String>();
+            for (String line : partConfigLines) {
+                if (line.contains(variableName) && line.contains("CA")
+                && line.contains("Offset") && line.contains("in")) {
+                    if (line.contains("X")) {
+                        var dimension = line.split("=")[1];
+                        partConfigOffsetTable.put("X Offset", dimension);
+                    } else if (line.contains("Z")) {
+                        var dimension = line.split("=")[1];
+                        partConfigOffsetTable.put("Z Offset", dimension);
+                    }
+                }
+            }
+
+            // get line numbers for the hole number X and Z offset
+            var assemblyConfigXZOffsetLineNumberStringList = new StringBuilder();
+            index = 0;
+            for (String line : coverAssemblyConfigLines) {
+                if (line.contains(variableName) && line.contains("Offset") &&
+                line.contains("in")) {
+                    assemblyConfigXZOffsetLineNumberStringList.append(index);
+                    assemblyConfigXZOffsetLineNumberStringList.append(" ");
+                }
+                ++index;
+            }
+            var assemblyConfigOffsetLineNumberArray = assemblyConfigXZOffsetLineNumberStringList.toString().split(" ");
+
+            // set cover assembly lines for hole number offset to part config dimension
+            for (String lineNumber : assemblyConfigOffsetLineNumberArray) {
+                var asInt = Integer.parseInt(lineNumber);
+                for (String offset : partConfigOffsetTable.keySet()) {
+                    var line = coverAssemblyConfigLines[asInt];
+                    if (line.contains(offset)) {
+                        var newOffset = partConfigOffsetTable.get(offset);
+                        var lineSegments = line.split("=");
+                        var newLine = lineSegments[0].trim() + "=" + newOffset;
+                        coverAssemblyConfigLines[asInt] = newLine;
+                    }
+                }
+            }
+
 
             // write app data
             writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
-            // write config to config.txt file
+            // generate new config.txt content
             var builder = new StringBuilder();
             for (String line : coverAssemblyConfigLines) {
                 builder.append(line);
