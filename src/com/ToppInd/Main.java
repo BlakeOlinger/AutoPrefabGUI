@@ -513,6 +513,66 @@ public class Main {
             }
         }
 
+
+        // check for variableName matching user input and if null - generate user input table for this variableName
+        var offsetUserInputTable = new HashMap<String, String>();
+        for (String userInput : coverConfigVariableUserInputTable.keySet()) {
+            if (userInput.contains(variableName) && userInput.contains("Offset") &&
+            !userInput.contains("Degree")) {
+                var userOffset = coverConfigVariableUserInputTable.get(userInput).isEmpty() ?
+                        "null" : coverConfigVariableUserInputTable.get(userInput);
+                offsetUserInputTable.put(userInput, userOffset);
+            }
+        }
+
+        // generate table of hole/X/Z - line numbers
+        var holeZXLineNumberTable = new HashMap<Integer, String>();
+        // generate table of line number - negative hole/x/z
+        var negativeXZStringList = new StringBuilder();
+        var index = 0;
+        for (String line : coverConfigContentLines) {
+            if (line.contains("in") && line.contains("Offset")) {
+                holeZXLineNumberTable.put(index, line);
+            } else if (line.contains("Negative")) {
+                negativeXZStringList.append(line);
+                negativeXZStringList.append("!");
+            }
+            ++index;
+        }
+        var negativeXZArray = negativeXZStringList.toString().split("!");
+
+        for (int lineNumber : holeZXLineNumberTable.keySet()) {
+            var line = coverConfigContentLines[lineNumber];
+            for (String negation : negativeXZArray) {
+                var holeNumber = negation.split("CA")[0].replace("\"", "").trim();
+                var isNegative = negation.split("=")[1].contains("1");
+                var XorZ = negation.split("CA")[1].split("Negative")[0];
+                if (line.contains(holeNumber) && isNegative && line.contains(XorZ)) {
+                    if (line.contains(variableName)) {
+                        var lineVariable = line.split("=")[0];
+                        var userInput = offsetUserInputTable.get(lineVariable);
+                        var isUserInputNull = userInput.contains("null");
+                        if (isUserInputNull) {
+                            var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= -" +
+                                    coverConfigContentLines[lineNumber].split("=")[1].trim();
+                            coverConfigContentLines[lineNumber] = newLine;
+                        } else {
+                            var isUserInputNegative = userInput.contains("-");
+                            if (isUserInputNegative) {
+                                var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= " +
+                                        coverConfigContentLines[lineNumber].split("=")[1].trim();
+                                coverConfigContentLines[lineNumber] = newLine;
+                            }
+                        }
+                    } else {
+                        var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= -" +
+                                coverConfigContentLines[lineNumber].split("=")[1].trim();
+                        coverConfigContentLines[lineNumber] = newLine;
+                    }
+                }
+            }
+        }
+
         // write updated content to file
         var builder = new StringBuilder();
         for (String line : coverConfigContentLines) {
@@ -520,7 +580,7 @@ public class Main {
             builder.append("\n");
         }
         writeToConfig(builder.toString(), coverConfigPath);
-
+        System.out.println(builder);
         // write path app data to rebuild.txt
         writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
