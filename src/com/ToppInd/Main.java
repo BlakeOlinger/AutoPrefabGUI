@@ -28,8 +28,8 @@ public class Main {
             )
     );
     private static final boolean REBUILDABLE = true;
-    private static final boolean WRITEABLE = true;
-    private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
+    private static final boolean WRITEABLE = REBUILDABLE;
+    private static final boolean ASSEMBLY_MATE_CALIBRATION = true;
 
     public static void main(String[] args) {
         // display main window
@@ -447,20 +447,44 @@ public class Main {
                 System.out.println(rebuildAppData);
             }
 
-            // write app data
-            writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-
-            // generate new config.txt content
             var builder = new StringBuilder();
             for (String line : coverAssemblyConfigLines) {
                 builder.append(line);
                 builder.append("\n");
             }
+            // write app data
+            // ask to do so first if damn thing is going to flip mates
+            if (rebuildAppData.toString().contains("Distance")) {
+                var window = new JFrame("Confirm");
+                window.setSize(300, 300);
+                window.setLayout(new FlowLayout());
+                window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                window.setLocationRelativeTo(null);
+                var yesButton = new JButton("Confirm");
+                yesButton.addActionListener(e1 -> {
+                    writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+                    // generate new config.txt content
 
-            // write new config
-            writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+                    // write new config
+                    writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
 
-            rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+                    rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+                    window.dispose();
+                });
+                window.add(yesButton);
+                var noButton = new JButton("Cancel");
+                noButton.addActionListener(e1 -> window.dispose());
+                window.add(noButton);
+                window.setVisible(true);
+            } else {
+                writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+                // generate new config.txt content
+
+                // write new config
+                writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+
+                rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+            }
         });
         return button;
     }
@@ -617,9 +641,8 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-
         writeToConfig(builder.toString(), coverConfigPath);
-//        System.out.println(builder);
+
         // write path app data to rebuild.txt
         writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
