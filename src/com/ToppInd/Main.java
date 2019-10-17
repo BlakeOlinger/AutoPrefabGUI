@@ -143,7 +143,19 @@ public class Main {
         }
         window.add(selectMaterialButton());
 
+        window.add(coverAssemblyConfigureButton());
+
         window.setVisible(true);
+    }
+
+    private static JButton coverAssemblyConfigureButton() {
+        var button = new JButton("Cover Assembly Configurer");
+        button.addActionListener(coverAssemblyConfigureAction());
+        return button;
+    }
+
+    private static ActionListener coverAssemblyConfigureAction() {
+        return e -> System.out.println("FUCK");
     }
 
     private static void setCoverSelectionAssemblyConfig() {
