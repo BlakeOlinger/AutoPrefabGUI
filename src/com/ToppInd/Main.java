@@ -29,6 +29,7 @@ public class Main {
     );
     private static final boolean REBUILDABLE = true;
     private static final boolean WRITEABLE = true;
+    private static final boolean ASSEMBLY_MATE_CALIBRATION = true;
 
     public static void main(String[] args) {
         // display main window
@@ -373,7 +374,6 @@ public class Main {
                             var partIsNegative = partDimension.split("=")[1].contains("1");
                             if (!(assemblyIsNegative && partIsNegative ||
                                     !assemblyIsNegative && !partIsNegative)) {
-                                System.out.println(assemblyDimension + " " + partDimension);
                                 var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
                                 for (String line : coverAssemblyConfigLines) {
                                     if (line.contains("@") && line.contains(XorZ) &&
@@ -429,6 +429,22 @@ public class Main {
                         coverAssemblyConfigLines[asInt] = newLine;
                     }
                 }
+            }
+            // display rebuild app data and all hole part assembly negations
+            if (ASSEMBLY_MATE_CALIBRATION) {
+                System.out.println("\n\n\n");
+                for (String line : partConfigLines) {
+                    if (line.contains("Negative")) {
+                        System.out.println(line);
+                    }
+                }
+                for (String line : coverAssemblyConfigLines) {
+                    if (line.contains("Negative")) {
+                        System.out.println(line);
+                    }
+                }
+
+                System.out.println(rebuildAppData);
             }
 
             // write app data
