@@ -364,18 +364,24 @@ public class Main {
                 for (String partDimension : partConfigXZNegationStateTable.keySet()) {
                     if (assemblyDimension.contains("X") && partDimension.contains("X") ||
                             assemblyDimension.contains("Z") && partDimension.contains("Z")) {
-                        var assemblyIsNegative = assemblyDimension.split("=")[1].contains("1");
-                        var partIsNegative = partDimension.split("=")[1].contains("1");
-
-                        if (!(assemblyIsNegative && partIsNegative ||
-                                !assemblyIsNegative && !partIsNegative)) {
-                            var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
-                            for (String line : coverAssemblyConfigLines) {
-                                if (line.contains("@") && line.contains(XorZ) &&
-                                        line.contains(variableName)) {
-                                    var dimension = line.split("@")[1].split("=")[0].replace("\"", "").trim();
-                                    rebuildAppData.append(dimension);
-                                    rebuildAppData.append("\n");
+                        var assemblyStringSegments = assemblyDimension.split(" ");
+                        var partStringSegments = partDimension.split(" ");
+                        var assemblyHoleNumber = Integer.parseInt(assemblyStringSegments[1].trim());
+                        var partHoleNumber =Integer.parseInt(partStringSegments[1].trim());
+                        if (assemblyHoleNumber == partHoleNumber) {
+                            var assemblyIsNegative = assemblyDimension.split("=")[1].contains("1");
+                            var partIsNegative = partDimension.split("=")[1].contains("1");
+                            if (!(assemblyIsNegative && partIsNegative ||
+                                    !assemblyIsNegative && !partIsNegative)) {
+                                System.out.println(assemblyDimension + " " + partDimension);
+                                var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
+                                for (String line : coverAssemblyConfigLines) {
+                                    if (line.contains("@") && line.contains(XorZ) &&
+                                            line.contains(variableName)) {
+                                        var dimension = line.split("@")[1].split("=")[0].replace("\"", "").trim();
+                                        rebuildAppData.append(dimension);
+                                        rebuildAppData.append("\n");
+                                    }
                                 }
                             }
                         }
@@ -424,7 +430,6 @@ public class Main {
                     }
                 }
             }
-
 
             // write app data
             writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
