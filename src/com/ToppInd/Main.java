@@ -27,9 +27,9 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
-    private static final boolean WRITEABLE = true;
-    private static final boolean ASSEMBLY_MATE_CALIBRATION = true;
+    private static final boolean REBUILDABLE = false;
+    private static final boolean WRITEABLE = false;
+    private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
         // display main window
@@ -126,7 +126,7 @@ public class Main {
         // define total number of hole features to know the number of hole feature buttons to produce
         var holeFeatures = 0;
         for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
-            if (!variable.matches("[^0-9]*"))
+            if (!variable.matches("[^0-9]*") && variable.contains("Hole"))
                 holeFeatures = Math.max(Integer.parseInt(variable.split(" ")[1]), holeFeatures);
         }
 
@@ -230,7 +230,7 @@ public class Main {
 
     private static void displayBaseCoverParamsConfigWindow(String windowTitle, String variableName) {
         var window = new JFrame(windowTitle);
-        window.setSize(300, 400);
+        window.setSize(300, 500);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -565,9 +565,24 @@ public class Main {
         for (int lineNumber : holeZXLineNumberTable.keySet()) {
             var line = coverConfigContentLines[lineNumber];
             for (String negation : negativeXZArray) {
-                var holeNumber = negation.split("CA")[0].replace("\"", "").trim();
-                var isNegative = negation.split("=")[1].contains("1");
-                var XorZ = negation.split("CA")[1].split("Negative")[0];
+                var holeNumber = "";
+                var isNegative = false;
+                if (negation.contains("Handle")) {
+                    holeNumber = negation.split(" ")[2].trim() + " " + negation.split(" ")[3].trim();
+                    isNegative = negation.split("=")[1].contains("1");
+                    System.out.println(holeNumber);
+                    System.out.println(isNegative);
+                } else {
+                    holeNumber = negation.split("CA")[0].replace("\"", "").trim();
+                    isNegative = negation.split("=")[1].contains("1");
+                }
+                try {
+                    var XorZ = "";
+                    if (negation.contains("CA")) {
+                        XorZ = negation.split("CA")[1].split("Negative")[0];
+                    } else if (negation.contains("Handle")) {
+                        XorZ = negation.split("deg")[1].split("Negative")[0].trim();
+                    }
                 if (line.contains(holeNumber) && isNegative && line.contains(XorZ)) {
                     if (line.contains(variableName)) {
                         var lineVariable = line.split("=")[0];
@@ -583,6 +598,7 @@ public class Main {
                                 var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= " +
                                         coverConfigContentLines[lineNumber].split("=")[1].trim();
                                 coverConfigContentLines[lineNumber] = newLine;
+
                             }
                         }
                     } else {
@@ -590,6 +606,9 @@ public class Main {
                                 coverConfigContentLines[lineNumber].split("=")[1].trim();
                         coverConfigContentLines[lineNumber] = newLine;
                     }
+                }
+                } catch (ArrayIndexOutOfBoundsException exception) {
+                    System.out.println(negation);
                 }
             }
         }
@@ -600,8 +619,9 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-        writeToConfig(builder.toString(), coverConfigPath);
 
+        writeToConfig(builder.toString(), coverConfigPath);
+//        System.out.println(builder);
         // write path app data to rebuild.txt
         writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
