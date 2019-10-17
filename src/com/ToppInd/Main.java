@@ -27,8 +27,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = false;
+    private static final boolean REBUILDABLE = true;
+    private static final boolean WRITEABLE = true;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
@@ -570,8 +570,6 @@ public class Main {
                 if (negation.contains("Handle")) {
                     holeNumber = negation.split(" ")[2].trim() + " " + negation.split(" ")[3].trim();
                     isNegative = negation.split("=")[1].contains("1");
-                    System.out.println(holeNumber);
-                    System.out.println(isNegative);
                 } else {
                     holeNumber = negation.split("CA")[0].replace("\"", "").trim();
                     isNegative = negation.split("=")[1].contains("1");
