@@ -4,6 +4,7 @@ import bo.core.system.FilesUtil;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -27,7 +28,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
+    private static final boolean REBUILDABLE = false;
     private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = true;
 
@@ -150,12 +151,55 @@ public class Main {
 
     private static JButton coverAssemblyConfigureButton() {
         var button = new JButton("Cover Assembly Configurer");
-        button.addActionListener(coverAssemblyConfigureAction());
+        button.addActionListener(e -> displayCoverAssemblyConfigWindow());
         return button;
     }
 
-    private static ActionListener coverAssemblyConfigureAction() {
-        return e -> System.out.println("FUCK");
+    // TODO - make new window for general non-hole specific assembly features
+    // TODO - make new daemon for this as well, the other is getting a bit heavy with hol-specific rebuilds
+    // TODO - make the handle GT box first - only user interaction will be a bool select -
+    //  - the dimensions and negation states will be based off reading from the part config.txt file
+    private static void displayCoverAssemblyConfigWindow() {
+        var window = new JFrame("General Assembly Feature Configurer");
+        window.setSize(400, 300);
+        window.setLayout(new FlowLayout());
+        window.setLocationRelativeTo(null);
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        window.add(handleButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton handleButton() {
+        var button = new JButton("Cover Assembly Handle Config");
+        button.addActionListener(e -> displayAssemblyHandleConfigWindow());
+        return button;
+    }
+
+    private static void displayAssemblyHandleConfigWindow() {
+        var window = new JFrame("Cover Assembly Handle Configurer");
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setSize(150, 150);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+
+        var label = new JLabel("Bool: ");
+        window.add(label);
+        var textBox = new JTextField(1);
+        textBox.addActionListener(Main::handleBoolAction);
+        window.add(textBox);
+
+        window.setVisible(true);
+    }
+
+    private static void handleBoolAction(ActionEvent e){
+        var userInput = e.getActionCommand();
+        var coverPartConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+        for (String line : coverPartConfigLines) {
+            System.out.println(line);
+        }
+        writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH);
     }
 
     private static void setCoverSelectionAssemblyConfig() {
