@@ -18,6 +18,8 @@ public class Main {
     private static final Path SQUARE_COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverSquare.txt");
     private static final Path COVER_SHAPE_ASSEMBLY_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverConfig.txt");
     private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
+    private static final String APP_DATA_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\";
+    private static final Path APP_DATA_HANDLE_OFFSET_TABLE = Paths.get(APP_DATA_BASE + "assembly handle offset table.txt");
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
@@ -28,8 +30,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = false;
+    private static final boolean REBUILDABLE = true;
+    private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
@@ -270,8 +272,68 @@ public class Main {
             }
         }
 
-        // TODO - make sure part config and assembly config X/Z offsets match
-        //  - account for the size of the GT Box relative to the handle opening size
+        // make sure X/Z offsets between part/assembly config match
+        // populate part config handle offsets
+        var partHandleVariableBuilder = new StringBuilder();
+        for (String line : partConfigLines) {
+            if (line.contains("Handle") && line.contains("Offset") &&
+            !line.contains("@")) {
+                partHandleVariableBuilder.append(line);
+                partHandleVariableBuilder.append("!");
+            }
+        }
+        var partHandleVariableArray = partHandleVariableBuilder.toString().split("!");
+
+        // populate assembly config handle offsets
+        var assemblyLineNumberGTBoxVariableTable = new HashMap<Integer, String>();
+        index = 0;
+        for (String line : assemblyConfigLines) {
+            if (line.contains("GT Box") && line.contains("Offset") &&
+            !line.contains("IIF") && !line.contains("@")) {
+                assemblyLineNumberGTBoxVariableTable.put(index, line);
+            }
+            ++index;
+        }
+
+        // populate relevant offset table list
+        var offsetTableStringList = new StringBuilder();
+        var offsetTableLines = FilesUtil.read(APP_DATA_HANDLE_OFFSET_TABLE).split("\n");
+        for (String line : offsetTableLines) {
+            if (line.contains("GT Box")) {
+                offsetTableStringList.append(line);
+                offsetTableStringList.append("!");
+            }
+        }
+        var offsetTableArray = offsetTableStringList.toString().split("!");
+
+        // compare offsets and generate corresponding assembly config lines
+        for (int lineNumber : assemblyLineNumberGTBoxVariableTable.keySet()) {
+            var assemblyLine = assemblyConfigLines[lineNumber];
+            var assemblyType = assemblyLine.split(" ")[2].trim();
+            var assemblyIsX = assemblyLine.split(" ")[3].contains("X");
+
+            for (String partVariable : partHandleVariableArray) {
+                var partType = partVariable.split("Handle")[1].split(" ")[1].trim();
+                var partIsX = partVariable.split(" ")[4].contains("X");
+
+                if (assemblyType.compareTo(partType) == 0 &&
+                        (assemblyIsX && partIsX || !assemblyIsX && !partIsX)){
+                    for (String offset : offsetTableArray) {
+                        var offsetIsX = offset.split("=")[0].contains("X");
+                        var offsetType = offset.split(" ")[2].trim();
+
+                        if ((offsetIsX && assemblyIsX || !offsetIsX && !assemblyIsX) &&
+                        offsetType.compareTo(partType) == 0) {
+                            var partValue = Double.parseDouble(partVariable.split("=")[1].replace("in", "").trim());
+                            var offsetValueAsInt = Double.parseDouble(offset.split("=")[1].trim());
+                            partValue -= offsetValueAsInt;
+                            var newLine = assemblyLine.split("=")[0].trim() + "= " + partValue + "in";
+                            assemblyConfigLines[lineNumber] = newLine;
+                        }
+                    }
+                }
+            }
+        }
 
         // if user input is not null - check if input is "0" or "1"
         // if "0" set all assembly config lines handle bool to zero
