@@ -165,8 +165,76 @@ public class Main {
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         window.add(handleButton());
+        window.add(angleFrameButton());
 
         window.setVisible(true);
+    }
+
+    private static JButton angleFrameButton() {
+        var button = new JButton("2in Angle Frame");
+        button.addActionListener(e -> displayAngleFrameConfigWindow());
+        return button;
+    }
+
+    private static void displayAngleFrameConfigWindow() {
+        var window = new JFrame("2in Angle Frame Configurer");
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setSize(300, 300);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+// TODO - DON'T FORGET TO DO THE ID BASIN ANGLE IRON CUT AWAY
+        window.add(new JLabel("2in Angle Frame Bool: "));
+        var textBox = new JTextField(1);
+        textBox.addActionListener(Main::handleAngleFrameBoolAction);
+        window.add(textBox);
+
+        window.setVisible(true);
+    }
+
+    private static void handleAngleFrameBoolAction(ActionEvent event) {
+        var userInput = event.getActionCommand().isEmpty() ? null : event.getActionCommand();
+
+        // check if user input is not null - if null do nothing
+        if (userInput != null) {
+            var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
+
+            // get angle frame bool line number and line
+            // get current bool
+            var isCurrentlyActive = false;
+            var variableLineNumber = 0;
+            for (String line : coverAssemblyConfigLines) {
+                if (line.contains("2in Angle Frame Bool") &&
+                        !line.contains("IIF")) {
+                    isCurrentlyActive = coverAssemblyConfigLines[variableLineNumber].split("=")[1].contains("1");
+                    break;
+                }
+                ++variableLineNumber;
+            }
+
+            // get userInput bool
+            var userInputIsTrue = userInput.contains("1");
+
+            // if opposing signs write updated bool to assembly config.txt and rebuild
+            if (userInputIsTrue != isCurrentlyActive) {
+                var line = coverAssemblyConfigLines[variableLineNumber];
+                var newLine = line.split("=")[0].trim() + "= " + (isCurrentlyActive ? "0" : "1");
+
+                coverAssemblyConfigLines[variableLineNumber] = newLine;
+
+                // generate builder
+                var builder = new StringBuilder();
+                for (String assemblyLine : coverAssemblyConfigLines) {
+                    builder.append(assemblyLine);
+                    builder.append("\n");
+                }
+
+                // write to assembly config
+                writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+
+                // rebuild
+                rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+            }
+        }
     }
 
     private static JButton handleButton() {
