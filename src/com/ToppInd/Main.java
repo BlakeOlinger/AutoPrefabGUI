@@ -30,7 +30,7 @@ public class Main {
     );
     private static final boolean REBUILDABLE = false;
     private static final boolean WRITEABLE = REBUILDABLE;
-    private static final boolean ASSEMBLY_MATE_CALIBRATION = true;
+    private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
         // display main window
@@ -184,11 +184,20 @@ public class Main {
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
 
-        var label = new JLabel("Bool: ");
-        window.add(label);
-        var textBox = new JTextField(1);
-        textBox.addActionListener(Main::handleBoolAction);
-        window.add(textBox);
+        // disable if no handle is active
+        var coverHasHandle = false;
+        var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+        for (String line : partConfigLines) {
+            System.out.println(line);
+        }
+        if (coverHasHandle) {
+            var label = new JLabel("Bool: ");
+
+            window.add(label);
+            var textBox = new JTextField(1);
+            textBox.addActionListener(Main::handleBoolAction);
+            window.add(textBox);
+        }
 
         window.setVisible(true);
     }
@@ -196,9 +205,7 @@ public class Main {
     private static void handleBoolAction(ActionEvent e){
         var userInput = e.getActionCommand();
         var coverPartConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
-        for (String line : coverPartConfigLines) {
-            System.out.println(line);
-        }
+
         writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH);
     }
 
@@ -603,7 +610,8 @@ public class Main {
                 var lineSuffix = "";
                 if (coverConfigContentLines[variableLineNumber].contains("in")) {
                     lineSuffix = "in";
-                } else if (coverConfigContentLines[variableLineNumber].contains("deg")) {
+                } else if (coverConfigContentLines[variableLineNumber].contains("deg") &&
+                !coverConfigContentLines[variableLineNumber].contains("Bool")) {
                     lineSuffix = "deg";
                 }
 
@@ -698,7 +706,7 @@ public class Main {
             builder.append("\n");
         }
         writeToConfig(builder.toString(), coverConfigPath);
-
+        System.out.println(builder);
         // write path app data to rebuild.txt
         writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
 
