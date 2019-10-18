@@ -270,6 +270,9 @@ public class Main {
             }
         }
 
+        // TODO - make sure part config and assembly config X/Z offsets match
+        //  - account for the size of the GT Box relative to the handle opening size
+
         // if user input is not null - check if input is "0" or "1"
         // if "0" set all assembly config lines handle bool to zero
         // if "1" do nothing
@@ -352,7 +355,7 @@ public class Main {
             }
         }
 
-        // generate app data base
+        // generate app data initial line
         var appData = new StringBuilder();
         appData.append(COVER_ASSEMBLY_CONFIG_PATH);
         appData.append("\n");
