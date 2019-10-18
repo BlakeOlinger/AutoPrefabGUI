@@ -21,6 +21,7 @@ public class Main {
     private static final String APP_DATA_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\";
     private static final Path APP_DATA_HANDLE_OFFSET_TABLE = Paths.get(APP_DATA_BASE + "assembly handle offset table.txt");
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
+    private static final Path ANGLE_FRAME_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.2inAngleFrame.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
@@ -30,7 +31,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
+    private static final boolean REBUILDABLE = false;
     private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
@@ -182,13 +183,78 @@ public class Main {
         window.setSize(300, 300);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
-// TODO - DON'T FORGET TO DO THE ID BASIN ANGLE IRON CUT AWAY
+// TODO - DON'T FORGET TO DO THE INNER DIAMETER BASIN ANGLE FRAME CUT AWAY + BOOL
         window.add(new JLabel("2in Angle Frame Bool: "));
-        var textBox = new JTextField(1);
-        textBox.addActionListener(Main::handleAngleFrameBoolAction);
-        window.add(textBox);
+        var boolBox = new JTextField(1);
+        boolBox.addActionListener(Main::handleAngleFrameBoolAction);
+        window.add(boolBox);
+
+        window.add(new JLabel("2in Angle Frame X Length: "));
+        var xLengthBox = new JTextField(2);
+        xLengthBox.addActionListener(Main::handleAngleFrameXLength);
+        window.add(xLengthBox);
 
         window.setVisible(true);
+    }
+
+    private static void handleAngleFrameXLength(ActionEvent event) {
+        // TODO - only responsible for angle frame X length dimensioning, writing, and rebuilding
+        var userInput = getUserTextInput(event);
+
+        // if user input is not null
+        if (userInput != null) {
+            var partConfigLines = getLines(ANGLE_FRAME_CONFIG_PATH);
+
+            var dimensionLines = getDimensionedLines(partConfigLines, "X");
+
+            partConfigLines = getModifyLinesWithUserInput(dimensionLines, partConfigLines, userInput);
+        }
+    }
+
+    private static String[] getModifyLinesWithUserInput(HashMap<Integer, String> lineNumberMap,
+                                                        String[] lines, String userInput) {
+        if (lineNumberMap.size() == 1) {
+            for (int lineNumber : lineNumberMap.keySet()) {
+                var line = lineNumberMap.get(lineNumber);
+                var newLine = line.split("=")[0].trim() + "= " + userInput.trim() + "in";
+
+                System.out.println(newLine);
+            }
+        }
+        return null;
+    }
+
+    private static HashMap<Integer, String> getDimensionedLines(String[] lines, String identifier) {
+        var map = new HashMap<Integer, String>();
+        var index = 0;
+        for (String line : lines) {
+            if (line.contains("in") && !line.contains("@") && line.contains(identifier)) {
+
+                map.put(index, line);
+            }
+            ++index;
+        }
+        return map;
+    }
+
+    private static void outputLines(String... lines) {
+        for (String line : lines) {
+            System.out.println(line);
+        }
+    }
+
+    private static void outputLines(HashMap<Integer, String> map) {
+        for (String line : map.values()) {
+            System.out.println(line);
+        }
+    }
+
+    private static String[] getLines(Path path) {
+        return FilesUtil.read(path).split("\n");
+    }
+
+    private static String getUserTextInput(ActionEvent event) {
+        return event.getActionCommand().isEmpty() ? null : event.getActionCommand();
     }
 
     private static void handleAngleFrameBoolAction(ActionEvent event) {
