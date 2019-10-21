@@ -200,11 +200,42 @@ public class Main {
         window.add(zLengthBox);
 
         window.add(new JLabel("2in Angle Frame ID Cutaway Bool: "));
-        var angleFrameCutawayBool = new JTextField(1);
-        angleFrameCutawayBool.addActionListener(e -> assemblyBoolActionHandler(e, "Angle Frame ID Cutaway Bool"));
-        window.add(angleFrameCutawayBool);
+        var cutawayBoolInputBox = new JTextField(1);
+        cutawayBoolInputBox.addActionListener(e -> assemblyBoolActionHandler(e, "Angle Frame ID Cutaway Bool"));
+        window.add(cutawayBoolInputBox);
+
+        window.add(new JLabel("Angle Frame ID Cutaway Diameter: "));
+        var cutawayDiameterInputBox = new JTextField(2);
+        cutawayDiameterInputBox.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame ID Cutaway Diameter\"=", "in", false, false));
+        window.add(cutawayDiameterInputBox);
 
         window.setVisible(true);
+    }
+
+    // refactor to Assembly Util API - general assembly dimension handler
+    private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, boolean isMateDimension, boolean canBeNegative) {
+        // the two booleans are going to point to calls to external methods
+        var userInput = getUserTextInput(event);
+        if (userInput != null) {
+            var assemblyConfigLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
+            var dimensionLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
+
+            for (int lineNumber : dimensionLineNumberTable.keySet()) {
+                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, units);
+
+                assemblyConfigLines[lineNumber] = newLine;
+            }
+
+            // write app data
+            writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // generate and write config.txt data
+            var newText = generateWriteOutput(assemblyConfigLines);
+            writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH);
+
+            // call rebuild daemon
+            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+        }
     }
 
     // refactor to Assembly Util API - general assembly bool handler
@@ -212,7 +243,7 @@ public class Main {
         var userInput = getUserTextInput(event);
         if (userInput != null) {
             var assemblyConfigLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
-            var boolLineNumberTable = getLineNumberLineTable(assemblyConfigLines, line);
+            var boolLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
 
             for (int lineNumber : boolLineNumberTable.keySet()) {
                 var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, "");
@@ -239,10 +270,13 @@ public class Main {
         if (userInput != null) {
             var partConfigLines = getLinesFromPath(ANGLE_FRAME_CONFIG_PATH);
 
-            var dimensionXLineNumberTable = getLineNumberLineTable(partConfigLines, XZ);
+            var lineIdentifier = "\"" + XZ + " Clear Access\"=";
 
-            for (int lineNumber : dimensionXLineNumberTable.keySet()) {
-                var newLine = dimensionXLineNumberTable.get(lineNumber).split("=")[0].trim() +
+            var lineNumberTable = getSingleLineNumberTable(partConfigLines, lineIdentifier);
+            outputLines(lineNumberTable);
+
+            for (int lineNumber : lineNumberTable.keySet()) {
+                var newLine = lineNumberTable.get(lineNumber).split("=")[0].trim() +
                         "= " + userInput + "in";
 
                 partConfigLines[lineNumber] = newLine;
@@ -276,24 +310,15 @@ public class Main {
     }
 
     // refactor to Util API - general use
-    private static HashMap<Integer, String> getLineNumberLineTable(String[] lines, String identifier) {
+    private static HashMap<Integer, String> getSingleLineNumberTable(String[] lines, String identifier) {
         var map = new HashMap<Integer, String>();
         var index = 0;
-        if (identifier.contains("Bool")) {
-            for (String line : lines) {
-                if (line.contains(identifier)) {
-                    map.put(index, line);
-                    break;
-                }
-                ++index;
+        for (String line : lines) {
+            if (line.contains(identifier) && !line.contains("IIF")) {
+                map.put(index, line);
+                break;
             }
-        } else {
-            for (String line : lines) {
-                if (line.contains("in") && !line.contains("@") && line.contains(identifier)) {
-                    map.put(index, line);
-                }
-                ++index;
-            }
+            ++index;
         }
 
         return map;
