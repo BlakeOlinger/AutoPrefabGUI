@@ -31,7 +31,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
+    private static final boolean REBUILDABLE = true;
     private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
@@ -183,7 +183,7 @@ public class Main {
         window.setSize(300, 300);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
-// TODO - DON'T FORGET TO DO THE INNER DIAMETER BASIN ANGLE FRAME CUT AWAY + BOOL
+
         window.add(new JLabel("2in Angle Frame Bool: "));
         var boolBox = new JTextField(1);
         boolBox.addActionListener(Main::handleAngleFrameBoolAction);
@@ -191,68 +191,134 @@ public class Main {
 
         window.add(new JLabel("2in Angle Frame X Length: "));
         var xLengthBox = new JTextField(2);
-        xLengthBox.addActionListener(Main::handleAngleFrameXLength);
+        xLengthBox.addActionListener(e -> handleAngleFrameLength(e, "X"));
         window.add(xLengthBox);
+
+        window.add(new JLabel("2in Angle Frame Z Length: "));
+        var zLengthBox = new JTextField(2);
+        zLengthBox.addActionListener(e -> handleAngleFrameLength(e, "Z"));
+        window.add(zLengthBox);
+
+        window.add(new JLabel("2in Angle Frame ID Cutaway Bool: "));
+        var angleFrameCutawayBool = new JTextField(1);
+        angleFrameCutawayBool.addActionListener(e -> assemblyBoolActionHandler(e, "Angle Frame ID Cutaway Bool"));
+        window.add(angleFrameCutawayBool);
 
         window.setVisible(true);
     }
 
-    private static void handleAngleFrameXLength(ActionEvent event) {
-        // TODO - only responsible for angle frame X length dimensioning, writing, and rebuilding
+    // refactor to Assembly Util API - general assembly bool handler
+    private static void assemblyBoolActionHandler(ActionEvent event, String line) {
+        var userInput = getUserTextInput(event);
+        if (userInput != null) {
+            var assemblyConfigLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
+            var boolLineNumberTable = getLineNumberLineTable(assemblyConfigLines, line);
+
+            for (int lineNumber : boolLineNumberTable.keySet()) {
+                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, "");
+
+                assemblyConfigLines[lineNumber] = newLine;
+            }
+
+            // write app data
+            writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // generate and write new lines
+            var newText = generateWriteOutput(assemblyConfigLines);
+            writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH);
+
+            // call rebuild daemon
+            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+        }
+    }
+
+    private static void handleAngleFrameLength(ActionEvent event, String XZ) {
         var userInput = getUserTextInput(event);
 
         // if user input is not null
         if (userInput != null) {
-            var partConfigLines = getLines(ANGLE_FRAME_CONFIG_PATH);
+            var partConfigLines = getLinesFromPath(ANGLE_FRAME_CONFIG_PATH);
 
-            var dimensionLines = getDimensionedLines(partConfigLines, "X");
+            var dimensionXLineNumberTable = getLineNumberLineTable(partConfigLines, XZ);
 
-            partConfigLines = getModifyLinesWithUserInput(dimensionLines, partConfigLines, userInput);
-        }
-    }
+            for (int lineNumber : dimensionXLineNumberTable.keySet()) {
+                var newLine = dimensionXLineNumberTable.get(lineNumber).split("=")[0].trim() +
+                        "= " + userInput + "in";
 
-    private static String[] getModifyLinesWithUserInput(HashMap<Integer, String> lineNumberMap,
-                                                        String[] lines, String userInput) {
-        if (lineNumberMap.size() == 1) {
-            for (int lineNumber : lineNumberMap.keySet()) {
-                var line = lineNumberMap.get(lineNumber);
-                var newLine = line.split("=")[0].trim() + "= " + userInput.trim() + "in";
-
-                System.out.println(newLine);
+                partConfigLines[lineNumber] = newLine;
             }
+
+            // write app data
+            writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // write to assembly config
+            var newText = generateWriteOutput(partConfigLines);
+            writeToConfig(newText, ANGLE_FRAME_CONFIG_PATH);
+
+            // send rebuild command
+            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
         }
-        return null;
     }
 
-    private static HashMap<Integer, String> getDimensionedLines(String[] lines, String identifier) {
+    // refactor to Util API - general use
+    private static String getNewLineUserInput(String original, String userInput, String units) {
+        return original.split("=")[0].trim() + "= " + userInput + units;
+    }
+
+    // refactor to Util API - general use
+    private static String generateWriteOutput(String... lines) {
+        var builder = new StringBuilder();
+        for (String line : lines) {
+            builder.append(line);
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
+    // refactor to Util API - general use
+    private static HashMap<Integer, String> getLineNumberLineTable(String[] lines, String identifier) {
         var map = new HashMap<Integer, String>();
         var index = 0;
-        for (String line : lines) {
-            if (line.contains("in") && !line.contains("@") && line.contains(identifier)) {
-
-                map.put(index, line);
+        if (identifier.contains("Bool")) {
+            for (String line : lines) {
+                if (line.contains(identifier)) {
+                    map.put(index, line);
+                    break;
+                }
+                ++index;
             }
-            ++index;
+        } else {
+            for (String line : lines) {
+                if (line.contains("in") && !line.contains("@") && line.contains(identifier)) {
+                    map.put(index, line);
+                }
+                ++index;
+            }
         }
+
         return map;
     }
 
+    // refactor to Util API - general use
     private static void outputLines(String... lines) {
         for (String line : lines) {
             System.out.println(line);
         }
     }
 
+    // refactor to Util API - general use
     private static void outputLines(HashMap<Integer, String> map) {
         for (String line : map.values()) {
             System.out.println(line);
         }
     }
 
-    private static String[] getLines(Path path) {
+    // refactor to Util API - general use
+    private static String[] getLinesFromPath(Path path) {
         return FilesUtil.read(path).split("\n");
     }
 
+    // refactor to Util API - general use
     private static String getUserTextInput(ActionEvent event) {
         return event.getActionCommand().isEmpty() ? null : event.getActionCommand();
     }
@@ -341,8 +407,6 @@ public class Main {
         window.setVisible(true);
     }
 
-    // TODO - refactor this into a class that can be used
-    //  - with other general assembly features
     private static void handleBoolAction(ActionEvent e){
         var userInput = e.getActionCommand().isEmpty() ? null : e.getActionCommand();
         var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
@@ -373,7 +437,7 @@ public class Main {
             }
             ++index;
         }
-
+// TODO - refactor this bit out to work with other assembly mate features
         // makes sure part config and assembly config handle booleans match - default if user input is null
         for (int partConfigLineNumber : partConfigLineNumberVariableListTable.keySet()) {
             var partConfigVariable = partConfigLineNumberVariableListTable.get(partConfigLineNumber);
@@ -1123,6 +1187,7 @@ public class Main {
         rebuild(DaemonProgram.REBUILD);
     }
 
+    // refactor to Util API - general use
     private static void rebuild(DaemonProgram program) {
         if (REBUILDABLE) {
             // write to rebuild.txt the path to the assembly config.txt file
