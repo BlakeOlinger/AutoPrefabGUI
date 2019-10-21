@@ -31,7 +31,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
+    private static final boolean REBUILDABLE = true;
     private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
@@ -331,6 +331,11 @@ public class Main {
         }
     }
 
+    private static void outputLines(String line, int integer) {
+        System.out.println(line);
+        System.out.println(integer + "");
+    }
+
     // refactor to Util API - general use
     private static void outputLines(HashMap<Integer, String> map) {
         for (String line : map.values()) {
@@ -428,7 +433,7 @@ public class Main {
             textBox.addActionListener(e -> handleBoolAction(e, "GT Box"));
             window.add(textBox);
 
-            var handleBoolLabel = new JLabel("Handle Bool: ");
+            var handleBoolLabel = new JLabel("Handle 0deg Bool: ");
             window.add(handleBoolLabel);
             var handleBoolTextBox = new JTextField(1);
             handleBoolTextBox.addActionListener(e -> handleBoolAction(e, "Handle 0deg"));
@@ -437,7 +442,8 @@ public class Main {
 
         window.setVisible(true);
     }
-
+    // This handles assembly features that are bool only input and derive X/Z location from
+    // part config and app data offset table
     private static void handleBoolAction(ActionEvent event, String assemblyFeature){
         var userInput = getUserTextInput(event);
         if (userInput != null) {
@@ -479,10 +485,11 @@ public class Main {
 
                     for (int assemblyConfigLineNumber : assemblyConfigLineNumberVariableListTable.keySet()) {
                         var assemblyConfigLine = assemblyConfigLineNumberVariableListTable.get(assemblyConfigLineNumber);
+
                         if (assemblyConfigLine.contains("Bool")) {
                             var assemblyType = getDimensionDegreeType(assemblyConfigLine);
-
-                            if (assemblyType.compareTo(partType) == 0) {
+                            var partAssemblyTypeIsSame = assemblyType.compareTo(partType) == 0;
+                            if (partAssemblyTypeIsSame) {
                                 var assemblyHandleIsActive = assemblyConfigLines[assemblyConfigLineNumber].split("=")[1].contains("1");
 
                                 // check if handle booleans match
@@ -491,7 +498,7 @@ public class Main {
 
                                 // if mismatched set assembly config line to match part config line
                                 if (partAssemblyBoolMismatch) {
-                                    var newLine = assemblyConfigLine + "= " + (partHandleIsActive ? "1" : "0");
+                                    var newLine = getNewLineUserInput(assemblyConfigLine, userInput, "");
 
                                     assemblyConfigLines[assemblyConfigLineNumber] = newLine;
                                 }
@@ -541,18 +548,22 @@ public class Main {
                 var assemblyType = getDimensionDegreeType(assemblyLine);
                 var assemblyIsX = isDimensionX(assemblyLine);
 
-                for (String partVariable : partHandleVariableArray) {
-                    var partType = getDimensionDegreeType(partVariable);
-                    var partIsX = isDimensionX(partVariable);
-                    if (assemblyType.compareTo(partType) == 0 &&
+                for (String partLine : partHandleVariableArray) {
+
+                    var partType = getDimensionDegreeType(partLine);
+                    var partIsX = isDimensionX(partLine);
+                    var assemblyPartTypeIsSame = assemblyType.compareTo(partType) == 0;
+
+                    if (assemblyPartTypeIsSame &&
                             (assemblyIsX && partIsX || !assemblyIsX && !partIsX)) {
+
                         for (String offset : offsetTableArray) {
                             var offsetIsX = isDimensionX(offset);
                             var offsetType = getDimensionDegreeType(offset);
 
                             if ((offsetIsX && assemblyIsX || !offsetIsX && !assemblyIsX) &&
                                     offsetType.compareTo(partType) == 0) {
-                                var partValue = Double.parseDouble(partVariable.split("=")[1].replace("in", "").trim());
+                                var partValue = Double.parseDouble(partLine.split("=")[1].replace("in", "").trim());
                                 var offsetValueAsInt = Double.parseDouble(offset.split("=")[1].trim());
                                 partValue -= offsetValueAsInt;
                                 var newLine = assemblyLine.split("=")[0].trim() + "= " + partValue + "in";
@@ -570,9 +581,9 @@ public class Main {
             if (userInput.contains("0")) {
                 // set all GT Box Bool to 0
                 for (int assemblyConfigLineNumber : assemblyConfigLineNumberVariableListTable.keySet()) {
-                    var assemblyConfigVariable = assemblyConfigLineNumberVariableListTable.get(assemblyConfigLineNumber);
-                    if (assemblyConfigVariable.contains("Bool")) {
-                        var newLine = assemblyConfigVariable.trim() + "= 0";
+                    var assemblyConfigLine = assemblyConfigLineNumberVariableListTable.get(assemblyConfigLineNumber);
+                    if (assemblyConfigLine.contains("Bool")) {
+                        var newLine = getNewLineUserInput(assemblyConfigLine, userInput, "");
                         assemblyConfigLines[assemblyConfigLineNumber] = newLine;
                     }
                 }
@@ -587,7 +598,7 @@ public class Main {
 
             // write to assembly config
             writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
-// TODO - current spot - check to make sure for aluminum handle app data generated is correct
+
             // generate app data
             // look for handle part config negation state and compare to
             // assembly handle negation state - if diff write handle offset
@@ -607,7 +618,7 @@ public class Main {
             var assemblyConfigLineNumberNegationTable = new HashMap<Integer, String>();
             index = 0;
             for (String line : assemblyConfigLines) {
-                if (line.contains("Negative") && line.contains("GT Box")) {
+                if (line.contains("Negative") && line.contains(assemblyFeature)) {
                     assemblyConfigLineNumberNegationTable.put(index, line);
                 }
                 ++index;
@@ -619,15 +630,13 @@ public class Main {
             var assemblyConfigNegationLineToFlipStringList = new StringBuilder();
             for (int partConfigLineNumber : partConfigLineNumberNegationTable.keySet()) {
                 var partConfigLine = partConfigLineNumberNegationTable.get(partConfigLineNumber);
-                var partLineIsX = partConfigLine.contains("X");
-                // assumes: "Cover Hatch Handle 90deg Z Negative"= 0
-                var partLineType = partConfigLine.split(" ")[3].trim();
+                var partLineIsX = isDimensionX(partConfigLine);
+                var partLineType = getDimensionDegreeType(partConfigLine);
 
                 for (int assemblyLineNumber : assemblyConfigLineNumberNegationTable.keySet()) {
                     var assemblyConfigLine = assemblyConfigLineNumberNegationTable.get(assemblyLineNumber);
-                    var assemblyLineIsX = assemblyConfigLine.contains("X");
-                    // assumes: "GT Box 0deg X Negative"= 0
-                    var assemblyLineType = assemblyConfigLine.split(" ")[2].trim();
+                    var assemblyLineIsX = isDimensionX(assemblyConfigLine);
+                    var assemblyLineType = getDimensionDegreeType(assemblyConfigLine);
 
                     // for matching X/Z and matching part type (0deg or 90deg)
                     if (partLineIsX && assemblyLineIsX ||
@@ -718,14 +727,33 @@ public class Main {
     private static String getDimensionDegreeType(String line) {
         var startIndex = 0;
         var lineSplit = line.split("=")[0];
-        if (line.contains("9")) {
-            startIndex = lineSplit.indexOf('9');
-        } else {
-            startIndex = lineSplit.indexOf('0');
+        var type = "";
+        var lineContainsZero = lineSplit.contains("0");
+        if (lineSplit.contains("9")) {
+            startIndex = firstIndex(line, '9');
+        } else if (lineContainsZero){
+            startIndex = firstIndex(line, '0');
         }
+
         var endIndex = line.contains("9") ? startIndex + 5 : startIndex + 4;
 
-        return line.substring(startIndex, endIndex);
+        type = line.substring(startIndex, endIndex);
+
+        return type.trim();
+    }
+
+    private static int firstIndex(String line, char indexCharacter) {
+        var index = 0;
+        var charArray = line.toCharArray();
+        var stop = false;
+        while (!stop) {
+            if (charArray[index] == indexCharacter){
+                stop = true;
+            } else {
+                ++index;
+            }
+        }
+        return index;
     }
 
     // refactor to Util API - general use - gets X/Z dimension type
