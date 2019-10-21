@@ -534,7 +534,7 @@ public class Main {
                 }
             }
             var offsetTableArray = offsetTableStringList.toString().split("!");
-// TODO - current
+
             // compare offsets and generate corresponding assembly config lines
             for (int lineNumber : assemblyLineNumberOffsetTable.keySet()) {
                 var assemblyLine = assemblyConfigLines[lineNumber];
@@ -544,7 +544,6 @@ public class Main {
                 for (String partVariable : partHandleVariableArray) {
                     var partType = getDimensionDegreeType(partVariable);
                     var partIsX = isDimensionX(partVariable);
-// FIXME - doesn't check for correct assembly feature
                     if (assemblyType.compareTo(partType) == 0 &&
                             (assemblyIsX && partIsX || !assemblyIsX && !partIsX)) {
                         for (String offset : offsetTableArray) {
@@ -557,9 +556,8 @@ public class Main {
                                 var offsetValueAsInt = Double.parseDouble(offset.split("=")[1].trim());
                                 partValue -= offsetValueAsInt;
                                 var newLine = assemblyLine.split("=")[0].trim() + "= " + partValue + "in";
-                                outputLines(assemblyConfigLines[lineNumber]);
+
                                 assemblyConfigLines[lineNumber] = newLine;
-                                outputLines(newLine);
                             }
                         }
                     }
@@ -589,7 +587,7 @@ public class Main {
 
             // write to assembly config
             writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
-
+// TODO - current spot - check to make sure for aluminum handle app data generated is correct
             // generate app data
             // look for handle part config negation state and compare to
             // assembly handle negation state - if diff write handle offset
