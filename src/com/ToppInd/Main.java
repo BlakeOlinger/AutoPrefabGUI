@@ -25,6 +25,8 @@ public class Main {
     private static final Path ALUM_FLAT_BAR_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.alumFlatBar.txt");
     private static final Path INSPECTION_PLATE_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.inspectionPlate.txt");
     private static final Path COVER_DRAWING_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverDrawing.txt");
+    private static final Path COVER_ASSEMBLY_PATH = Paths.get(PATH_BASE + "blob - L2\\blob.L2_cover.SLDASM");
+    private static final Path COVER_DRAWING_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.SLDDRW");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
@@ -100,8 +102,26 @@ public class Main {
 
         window.add(customPropertiesButton());
         window.add(drawingViewScaleButton());
+        window.add(generateDimensionsButton());
 
         window.setVisible(true);
+    }
+
+    private static JButton generateDimensionsButton() {
+        var button = new JButton("Generate Dimensions");
+        button.addActionListener(e -> handleDrawingGenerateDimensionsAction());
+        return button;
+    }
+
+    private static void handleDrawingGenerateDimensionsAction() {
+        // for now it is just a passive activator aside from writing the appropriate paths to app data
+        var appData = COVER_ASSEMBLY_PATH + "\n";
+        appData += COVER_ASSEMBLY_CONFIG_PATH + "\n";
+        appData += COVER_DRAWING_PATH;
+
+        writeToConfig(appData, REBUILD_DAEMON_APP_DATA_PATH);
+
+        rebuild(DaemonProgram.DRAWING_AUTO_DIMENSION);
     }
 
     private static JButton customPropertiesButton() {
