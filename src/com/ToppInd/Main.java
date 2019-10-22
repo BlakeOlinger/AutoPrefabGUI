@@ -125,7 +125,15 @@ public class Main {
             window.add(textBox);
         }
 
+        window.add(documentPropertiesSetAsDefaultsButton());
+
         window.setVisible(true);
+    }
+
+    private static JButton documentPropertiesSetAsDefaultsButton() {
+        var button = new JButton("Default");
+        button.addActionListener(e -> handleDocumentPropertyAction());
+        return button;
     }
 
     private static void handleDocumentPropertyAction(ActionEvent event, JLabel label) {
@@ -154,6 +162,26 @@ public class Main {
 
             rebuild(DaemonProgram.DRAWING_PROPERTIES);
         }
+    }
+
+    // this resets the values to their defaults
+    private static void handleDocumentPropertyAction() {
+        var configLines = getLinesFromPath(COVER_DRAWING_CONFIG_PATH);
+        var index = 0;
+        for (String line : configLines) {
+            if (line.contains("Property")) {
+                var newLine = getNewLineUserInput(line, "<>", "");
+                configLines[index] = newLine;
+            }
+            ++index;
+        }
+
+        var output = generateWriteOutput(configLines);
+        writeToConfig(output, COVER_DRAWING_CONFIG_PATH);
+
+        writeToConfig(COVER_DRAWING_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+        rebuild(DaemonProgram.DRAWING_PROPERTIES);
     }
 
     private static JLabel[] getPropertyLabels() {
