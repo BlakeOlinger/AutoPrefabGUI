@@ -7,7 +7,8 @@ enum DaemonProgram {
     ASSEMBLY_GENERAL("AutoGeneralAssembly.appref-ms"),
     DRAWING_AUTO_BALLOON("sw-test.appref-ms"),
     DRAWING_AUTO_CENTER_MARK("AutoCenterMark.appref-ms"),
-    DRAWING_AUTO_DIMENSION("AutoDimension.appref-ms");
+    DRAWING_AUTO_DIMENSION("AutoDimension.appref-ms"),
+    DRAWING_VIEW_SCALE("DrawingViewScale.appref-ms");
 
     private String program;
 

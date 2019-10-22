@@ -117,9 +117,28 @@ public class Main {
         window.setLayout(new FlowLayout());
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-
+        window.add(new JLabel("Drawing View 1 Scale: "));
+        var drawView1Box = new JTextField(2);
+        drawView1Box.addActionListener(Main::handleDrawingScaleViewAction);
+        window.add(drawView1Box);
 
         window.setVisible(true);
+    }
+
+    private static void handleDrawingScaleViewAction(ActionEvent event) {
+        var userInput = getUserTextInput(event);
+
+        if (userInput != null) {
+            var drawingViewOut = "\"Drawing View 1 Scale\"= " + userInput;
+
+            // write to app data
+            writeToConfig(COVER_DRAWING_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // write to drawing config
+            writeToConfig(drawingViewOut, COVER_DRAWING_CONFIG_PATH);
+
+            rebuild(DaemonProgram.DRAWING_VIEW_SCALE);
+        }
     }
 
     private static JButton configureCoverButton() {
