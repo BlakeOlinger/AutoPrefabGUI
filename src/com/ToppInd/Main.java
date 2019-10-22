@@ -24,6 +24,7 @@ public class Main {
     private static final Path ANGLE_FRAME_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.2inAngleFrame.txt");
     private static final Path ALUM_FLAT_BAR_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.alumFlatBar.txt");
     private static final Path INSPECTION_PLATE_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.inspectionPlate.txt");
+    private static final Path COVER_DRAWING_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverDrawing.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
@@ -33,7 +34,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
+    private static final boolean REBUILDABLE = false;
     private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
@@ -70,24 +71,55 @@ public class Main {
 
     private static void displayAppWindow() {
         var window = new JFrame("AutoPrefab");
-        window.setSize(600, 500);
+        window.setSize(400, 200);
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        window.setLayout(new BorderLayout());
+        window.setLayout(new FlowLayout());
 
         // add "Configure Cover" button
-        window.add(configureCoverButton(), BorderLayout.NORTH);
+        window.add(configureCoverButton());
 
         // add "Build Drawing" button
-        window.add(buildDrawingButton(), BorderLayout.SOUTH);
+        window.add(configureDrawingButton());
 
         window.setVisible(true);
     }
 
-    private static JButton buildDrawingButton() {
-        var button = new JButton("Build Drawing");
-        button.addActionListener(e -> rebuild(DaemonProgram.BUILD_DRAWING));
+    // TODO - open a drawing config adjustment window - allow user to adjust the drawing view size ratio
+    private static JButton configureDrawingButton() {
+        var button = new JButton("Configure Drawing");
+        button.addActionListener(e -> displayConfigureDrawingWindow());
         return button;
+    }
+
+    private static void displayConfigureDrawingWindow() {
+        var window = new JFrame("Drawing Configurer");
+        window.setSize(300, 300);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        window.add(drawingViewScaleButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton drawingViewScaleButton() {
+        var button = new JButton("Drawing View Scale");
+        button.addActionListener(e -> displayDrawingViewScaleConfigWindow());
+        return button;
+    }
+
+    private static void displayDrawingViewScaleConfigWindow() {
+        var window = new JFrame("Drawing Scale View Configurer");
+        window.setSize(250, 300);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+
+
+        window.setVisible(true);
     }
 
     private static JButton configureCoverButton() {

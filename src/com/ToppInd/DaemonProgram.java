@@ -4,8 +4,10 @@ enum DaemonProgram {
     REBUILD("AutoRebuildPart.appref-ms"),
     MATERIAL_CONFIG("AutoMaterialConfig.appref-ms"),
     ASSEMBLY_REBUILD("AutoAssemblyRebuild.appref-ms"),
-    BUILD_DRAWING("AutoPrefabDaemon.bat"),
-    ASSEMBLY_GENERAL("AutoGeneralAssembly.appref-ms");
+    ASSEMBLY_GENERAL("AutoGeneralAssembly.appref-ms"),
+    DRAWING_AUTO_BALLOON("sw-test.appref-ms"),
+    DRAWING_AUTO_CENTER_MARK("AutoCenterMark.appref-ms"),
+    DRAWING_AUTO_DIMENSION("AutoDimension.appref-ms");
 
     private String program;
 
