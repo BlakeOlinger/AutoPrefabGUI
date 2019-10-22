@@ -22,6 +22,7 @@ public class Main {
     private static final Path APP_DATA_HANDLE_OFFSET_TABLE = Paths.get(APP_DATA_BASE + "assembly handle offset table.txt");
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     private static final Path ANGLE_FRAME_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.2inAngleFrame.txt");
+    private static final Path ALUM_FLAT_BAR_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.alumFlatBar.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
@@ -157,7 +158,7 @@ public class Main {
         button.addActionListener(e -> displayCoverAssemblyConfigWindow());
         return button;
     }
-
+// cover assembly feature configurer window
     private static void displayCoverAssemblyConfigWindow() {
         var window = new JFrame("General Assembly Feature Configurer");
         window.setSize(400, 300);
@@ -167,6 +168,38 @@ public class Main {
 
         window.add(handleButton());
         window.add(angleFrameButton());
+        window.add(alumFlatBarButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton alumFlatBarButton() {
+        var button = new JButton("Alum Flat Bar");
+        button.addActionListener(e -> displayAlumFlatConfigWindow());
+        return button;
+    }
+
+    private static void displayAlumFlatConfigWindow() {
+        var window = new JFrame("Assembly Alum Flat Bar Config");
+        window.setSize(200, 300);
+        window.setLayout(new FlowLayout());
+        window.setLocationRelativeTo(null);
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        window.add(new JLabel("Alum Flat 0deg Bool: "));
+        var alumFlatBoolBox = new JTextField(1);
+        alumFlatBoolBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"Aluminum Flat Bar 0deg Bool\"="));
+        window.add(alumFlatBoolBox);
+
+        window.add(new JLabel("Alum Flat Bar X Length: "));
+        var alumFlatLengthX = new JTextField(2);
+        alumFlatLengthX.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Length X\"=", "in", ALUM_FLAT_BAR_CONFIG_PATH));
+        window.add(alumFlatLengthX);
+
+        window.add(new JLabel("Alum Flat Bar Z Length: "));
+        var alumFlatLengthZ = new JTextField(2);
+        alumFlatLengthZ.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Length Z\"=", "in", ALUM_FLAT_BAR_CONFIG_PATH));
+        window.add(alumFlatLengthZ);
 
         window.setVisible(true);
     }
@@ -210,6 +243,31 @@ public class Main {
         window.add(cutawayDiameterInputBox);
 
         window.setVisible(true);
+    }
+
+    private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, Path configPath) {
+        // the two booleans are going to point to calls to external methods
+        var userInput = getUserTextInput(event);
+        if (userInput != null) {
+            var assemblyConfigLines = getLinesFromPath(configPath);
+            var dimensionLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
+
+            for (int lineNumber : dimensionLineNumberTable.keySet()) {
+                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, units);
+
+                assemblyConfigLines[lineNumber] = newLine;
+            }
+
+            // write app data
+            writeToConfig(configPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // generate and write config.txt data
+            var newText = generateWriteOutput(assemblyConfigLines);
+            writeToConfig(newText, configPath);
+
+            // call rebuild daemon
+            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+        }
     }
 
     // refactor to Assembly Util API - general assembly dimension handler
@@ -313,6 +371,7 @@ public class Main {
     private static HashMap<Integer, String> getSingleLineNumberTable(String[] lines, String identifier) {
         var map = new HashMap<Integer, String>();
         var index = 0;
+
         for (String line : lines) {
             if (line.contains(identifier) && !line.contains("IIF")) {
                 map.put(index, line);
