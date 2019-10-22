@@ -34,7 +34,7 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
+    private static final boolean REBUILDABLE = true;
     private static final boolean WRITEABLE = REBUILDABLE;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
@@ -85,7 +85,6 @@ public class Main {
         window.setVisible(true);
     }
 
-    // TODO - open a drawing config adjustment window - allow user to adjust the drawing view size ratio
     private static JButton configureDrawingButton() {
         var button = new JButton("Configure Drawing");
         button.addActionListener(e -> displayConfigureDrawingWindow());
