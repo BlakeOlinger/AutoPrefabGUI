@@ -23,6 +23,7 @@ public class Main {
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     private static final Path ANGLE_FRAME_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.2inAngleFrame.txt");
     private static final Path ALUM_FLAT_BAR_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.alumFlatBar.txt");
+    private static final Path INSPECTION_PLATE_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.inspectionPlate.txt");
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
@@ -245,6 +246,7 @@ public class Main {
         window.setVisible(true);
     }
 
+    // refactor to Assembly Util API - general assembly dimension handler
     private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, Path configPath) {
         // the two booleans are going to point to calls to external methods
         var userInput = getUserTextInput(event);
@@ -321,6 +323,31 @@ public class Main {
         }
     }
 
+    // refactor to Assembly Util API - general assembly bool handler
+    private static void assemblyBoolActionHandler(ActionEvent event, String line, Path configPath) {
+        var userInput = getUserTextInput(event);
+        if (userInput != null) {
+            var assemblyConfigLines = getLinesFromPath(configPath);
+            var boolLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
+
+            for (int lineNumber : boolLineNumberTable.keySet()) {
+                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, "");
+
+                assemblyConfigLines[lineNumber] = newLine;
+            }
+
+            // write app data
+            writeToConfig(configPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            // generate and write new lines
+            var newText = generateWriteOutput(assemblyConfigLines);
+            writeToConfig(newText, configPath);
+
+            // call rebuild daemon
+            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+        }
+    }
+
     private static void handleAngleFrameLength(ActionEvent event, String XZ) {
         var userInput = getUserTextInput(event);
 
@@ -390,6 +417,7 @@ public class Main {
         }
     }
 
+    // refactor to Util API - general use
     private static void outputLines(String line, int integer) {
         System.out.println(line);
         System.out.println(integer + "");
@@ -398,6 +426,13 @@ public class Main {
     // refactor to Util API - general use
     private static void outputLines(HashMap<Integer, String> map) {
         for (String line : map.values()) {
+            System.out.println(line);
+        }
+    }
+
+    // refactor to Util API - general use
+    private static void outputLines(HashMap<String, Boolean> map, boolean isStringInt) {
+        for (String line : map.keySet()) {
             System.out.println(line);
         }
     }
@@ -954,7 +989,30 @@ public class Main {
             window.add(radioButton);
         }
 
+        window.add(inspectionPlateConfigButton(variableName));
+
         window.add(confirmHoleAssemblyConfigButton(variableName, buttonGroup));
+
+        window.setVisible(true);
+    }
+
+    private static JButton inspectionPlateConfigButton(String variableName) {
+        var button = new JButton("Inspection Plate Config");
+        button.addActionListener(e -> displayInspectionPlateConfigWindow(variableName));
+        return button;
+    }
+
+    private static void displayInspectionPlateConfigWindow(String variableName) {
+        var window = new JFrame("Inspection Plate Configurer");
+        window.setSize(300, 300);
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+// gets X/Z offsets from current hole - does this at user clicking 'confirm' in the prior assembly config screen
+        window.add(new JLabel("IN04A-25 4 Grips 45deg Bool: "));
+        var in0445degBoolBox = new JTextField(1);
+        in0445degBoolBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"IN04A-25 4 Grips 45deg Bool\"=", INSPECTION_PLATE_CONFIG_PATH));
+        window.add(in0445degBoolBox);
 
         window.setVisible(true);
     }
@@ -1023,7 +1081,7 @@ public class Main {
             // populate assembly config X/Z negation information for variable name (hole number) - read only
             var assemblyConfigXZNegationTable = new HashMap<String, Boolean>();
             for (String line : coverAssemblyConfigLines) {
-                if (line.contains("Negative")) {
+                if (line.contains("Negative") && line.contains("Hole")) {
                     var isNegative = line.split("=")[1].contains("1");
 
                     assemblyConfigXZNegationTable.put(line, isNegative);
@@ -1037,25 +1095,21 @@ public class Main {
             rebuildAppData.append("\n");
             for (String assemblyDimension : assemblyConfigXZNegationTable.keySet()) {
                 for (String partDimension : partConfigXZNegationStateTable.keySet()) {
-                    if (assemblyDimension.contains("X") && partDimension.contains("X") ||
-                            assemblyDimension.contains("Z") && partDimension.contains("Z")) {
-                        var assemblyStringSegments = assemblyDimension.split(" ");
-                        var partStringSegments = partDimension.split(" ");
-                        var assemblyHoleNumber = Integer.parseInt(assemblyStringSegments[1].trim());
-                        var partHoleNumber =Integer.parseInt(partStringSegments[1].trim());
-                        if (assemblyHoleNumber == partHoleNumber) {
-                            var assemblyIsNegative = assemblyDimension.split("=")[1].contains("1");
-                            var partIsNegative = partDimension.split("=")[1].contains("1");
-                            if (!(assemblyIsNegative && partIsNegative ||
-                                    !assemblyIsNegative && !partIsNegative)) {
-                                var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
-                                for (String line : coverAssemblyConfigLines) {
-                                    if (line.contains("@") && line.contains(XorZ) &&
-                                            line.contains(variableName)) {
-                                        var dimension = line.split("@")[1].split("=")[0].replace("\"", "").trim();
-                                        rebuildAppData.append(dimension);
-                                        rebuildAppData.append("\n");
-                                    }
+                    var assemblyHoleNumber = getHoleNumber(assemblyDimension);
+                    var partHoleNumber = getHoleNumber(partDimension);
+                    if (assemblyHoleNumber == partHoleNumber && (assemblyDimension.contains("X") && partDimension.contains("X") ||
+                            assemblyDimension.contains("Z") && partDimension.contains("Z"))) {
+                        var assemblyIsNegative = assemblyDimension.split("=")[1].contains("1");
+                        var partIsNegative = partDimension.split("=")[1].contains("1");
+                        if (!(assemblyIsNegative && partIsNegative ||
+                                !assemblyIsNegative && !partIsNegative)) {
+                            var XorZ = assemblyDimension.contains("X") ? "X" : "Z";
+                            for (String line : coverAssemblyConfigLines) {
+                                if (line.contains("@") && line.contains(XorZ) &&
+                                        line.contains(variableName)) {
+                                    var dimension = line.split("@")[1].split("=")[0].replace("\"", "").trim();
+                                    rebuildAppData.append(dimension);
+                                    rebuildAppData.append("\n");
                                 }
                             }
                         }
@@ -1161,6 +1215,14 @@ public class Main {
             }
         });
         return button;
+    }
+
+    private static int getHoleNumber(String line) {
+        var holeNumber = 0;
+        if (line.contains("Hole")) {
+            holeNumber = Integer.parseInt(line.split(" ")[1].trim());
+        }
+        return holeNumber;
     }
 
     private static void writeToConfig(String content, Path path) {
