@@ -98,9 +98,81 @@ public class Main {
         window.setLayout(new FlowLayout());
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
+        window.add(customPropertiesButton());
         window.add(drawingViewScaleButton());
 
         window.setVisible(true);
+    }
+
+    private static JButton customPropertiesButton() {
+        var button = new JButton("Document Info");
+        button.addActionListener(e -> displayCustomPropertiesConfigWindow());
+        return button;
+    }
+
+    private static void displayCustomPropertiesConfigWindow() {
+        var window = new JFrame("Document Information Configurer");
+        window.setSize(225, 500);
+        window.setLayout(new FlowLayout());
+        window.setLocationRelativeTo(null);
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        var propertyLabels = getPropertyLabels();
+        for (JLabel label : propertyLabels) {
+            window.add(label);
+            var textBox = new JTextField(10);
+            textBox.addActionListener(e -> handleDocumentPropertyAction(e, label));
+            window.add(textBox);
+        }
+
+        window.setVisible(true);
+    }
+
+    private static void handleDocumentPropertyAction(ActionEvent event, JLabel label) {
+        var text = label.getText();
+        var userInput = getUserTextInput(event);
+
+        if (userInput != null) {
+            var configLines = getLinesFromPath(COVER_DRAWING_CONFIG_PATH);
+
+            var index = 0;
+            for (String line : configLines) {
+                if (line.contains("Property")) {
+                    var identifier = text.replace(":", "").trim();
+                    if (line.contains(identifier)) {
+                        var newLine = getNewLineUserInput(line, userInput, "");
+                        configLines[index] = newLine;
+                    }
+                }
+                ++index;
+            }
+
+            var output = generateWriteOutput(configLines);
+            writeToConfig(output, COVER_DRAWING_CONFIG_PATH);
+
+            writeToConfig(COVER_DRAWING_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            rebuild(DaemonProgram.DRAWING_PROPERTIES);
+        }
+    }
+
+    private static JLabel[] getPropertyLabels() {
+        var configLines = getLinesFromPath(Main.COVER_DRAWING_CONFIG_PATH);
+        var returnLabelTotal = 0;
+        for (String line : configLines) {
+            if (line.contains("Property")) {
+                ++returnLabelTotal;
+            }
+        }
+        var labels = new JLabel[returnLabelTotal];
+        var labelIndex = 0;
+        for (String line : configLines) {
+            if (line.contains("Property")) {
+                var text = line.split(":")[1].split("=")[0].replace("\"", "").trim() + ": ";
+                labels[labelIndex++] = new JLabel(text);
+            }
+        }
+        return labels;
     }
 
     private static JButton drawingViewScaleButton() {
