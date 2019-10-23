@@ -9,7 +9,8 @@ enum DaemonProgram {
     CENTER_MARK("AutoCenterMark.appref-ms"),
     DRAWING_AUTO_DIMENSION("AutoDimension.appref-ms"),
     DRAWING_VIEW_SCALE("DrawingViewScale.appref-ms"),
-    DRAWING_PROPERTIES("DrawingProperties.appref-ms");
+    DRAWING_PROPERTIES("DrawingProperties.appref-ms"),
+    BASIC_REBUILD("Rebuild.appref-ms");
 
     private String program;
 

@@ -86,8 +86,7 @@ public class Main {
 
         window.setVisible(true);
     }
-// TODO  - adjust the circle/square selector to write square center mark booleans
-    // TODO - adjust center mark daemon to include reference geometry: axis
+    // FIXME - track down bug - replacing the '1' in the Hole 1... to '0' breaking the config file
     private static JButton configureDrawingButton() {
         var button = new JButton("Configure Drawing");
         button.addActionListener(e -> displayConfigureDrawingWindow());
@@ -308,6 +307,9 @@ public class Main {
 
         coverShapeSelection = shapeSelection;
 
+        // if square write to assembly config "Square Center Mark"= 1 else = 0
+        setAssemblySquareCenterMark();
+
         // set cover selection assembly config
         setCoverSelectionAssemblyConfig();
 
@@ -337,6 +339,42 @@ public class Main {
         window.add(coverAssemblyConfigureButton());
 
         window.setVisible(true);
+    }
+
+    private static void setAssemblySquareCenterMark() {
+        var configLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
+        var identifier = "Square Center Mark";
+        var index = 0;
+        var writeNeeded = false;
+
+        // set config line square center mark based on current setting and user shape selection
+        for (String line : configLines) {
+            if (line.contains(identifier) && !line.contains("IIF")) {
+                var currentStateIsOne = line.contains("1");
+                var selectionIsSquare = coverShapeSelection.contains("Square");
+                var newLine = "";
+                if (!currentStateIsOne && selectionIsSquare) {
+                    newLine = line.replace("0", "1");
+                    configLines[index] = newLine;
+                    writeNeeded = true;
+                } else if (currentStateIsOne && !selectionIsSquare) {
+                    newLine = line.replace("1", "0");
+                    configLines[index] = newLine;
+                    writeNeeded = true;
+                }
+            }
+            ++index;
+        }
+
+        if (writeNeeded) {
+            var newText = generateWriteOutput(configLines);
+
+            writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH);
+
+            writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+
+            rebuild(DaemonProgram.BASIC_REBUILD);
+        }
     }
 
     private static JButton coverAssemblyConfigureButton() {
@@ -606,6 +644,10 @@ public class Main {
     private static void outputLines(String line, int integer) {
         System.out.println(line);
         System.out.println(integer + "");
+    }
+
+    private static <T> void outputLines(T line) {
+        System.out.println(line);
     }
 
     // refactor to Util API - general use
