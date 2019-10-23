@@ -37,7 +37,7 @@ public class Main {
             )
     );
     private static final boolean REBUILDABLE = true;
-    private static final boolean WRITEABLE = REBUILDABLE;
+    private static final boolean WRITEABLE = true;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
