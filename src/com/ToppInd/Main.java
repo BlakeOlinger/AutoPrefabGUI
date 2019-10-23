@@ -92,7 +92,7 @@ public class Main {
         button.addActionListener(e -> displayConfigureDrawingWindow());
         return button;
     }
-
+// drawing configurer
     private static void displayConfigureDrawingWindow() {
         var window = new JFrame("Drawing Configurer");
         window.setSize(300, 300);
@@ -103,8 +103,15 @@ public class Main {
         window.add(customPropertiesButton());
         window.add(drawingViewScaleButton());
         window.add(generateDimensionsButton());
+        window.add(autoBalloonButton());
 
         window.setVisible(true);
+    }
+
+    private static JButton autoBalloonButton() {
+        var button = new JButton("Feature Balloons");
+        button.addActionListener(e -> rebuild(DaemonProgram.AUTO_BALLOON));
+        return button;
     }
 
     private static JButton generateDimensionsButton() {
@@ -283,7 +290,7 @@ public class Main {
 
         window.setVisible(true);
     }
-
+// cover configurer
     private static void displayCoverConfigWindow(String shapeSelection) {
         var window = new JFrame("Cover Configurer");
         window.setLayout(new FlowLayout());
