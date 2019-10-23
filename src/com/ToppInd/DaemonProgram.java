@@ -6,7 +6,7 @@ enum DaemonProgram {
     ASSEMBLY_REBUILD("AutoAssemblyRebuild.appref-ms"),
     ASSEMBLY_GENERAL("AutoGeneralAssembly.appref-ms"),
     AUTO_BALLOON("AutoBalloon.appref-ms"),
-    DRAWING_AUTO_CENTER_MARK("AutoCenterMark.appref-ms"),
+    CENTER_MARK("AutoCenterMark.appref-ms"),
     DRAWING_AUTO_DIMENSION("AutoDimension.appref-ms"),
     DRAWING_VIEW_SCALE("DrawingViewScale.appref-ms"),
     DRAWING_PROPERTIES("DrawingProperties.appref-ms");

@@ -86,7 +86,8 @@ public class Main {
 
         window.setVisible(true);
     }
-
+// TODO  - adjust the circle/square selector to write square center mark booleans
+    // TODO - adjust center mark daemon to include reference geometry: axis
     private static JButton configureDrawingButton() {
         var button = new JButton("Configure Drawing");
         button.addActionListener(e -> displayConfigureDrawingWindow());
@@ -104,12 +105,19 @@ public class Main {
         window.add(drawingViewScaleButton());
         window.add(generateDimensionsButton());
         window.add(autoBalloonButton());
+        window.add(autoCenterMarkButton());
 
         window.setVisible(true);
     }
 
+    private static JButton autoCenterMarkButton() {
+        var button = new JButton("Center Mark");
+        button.addActionListener(e -> rebuild(DaemonProgram.CENTER_MARK));
+        return button;
+    }
+
     private static JButton autoBalloonButton() {
-        var button = new JButton("Feature Balloons");
+        var button = new JButton("Feature Balloon");
         button.addActionListener(e -> rebuild(DaemonProgram.AUTO_BALLOON));
         return button;
     }
