@@ -86,7 +86,7 @@ public class Main {
 
         window.setVisible(true);
     }
-    // FIXME - track down bug - replacing the '1' in the Hole 1... to '0' breaking the config file
+
     private static JButton configureDrawingButton() {
         var button = new JButton("Configure Drawing");
         button.addActionListener(e -> displayConfigureDrawingWindow());
@@ -405,7 +405,7 @@ public class Main {
 
     private static void displayAlumFlatConfigWindow() {
         var window = new JFrame("Assembly Alum Flat Bar Config");
-        window.setSize(200, 300);
+        window.setSize(300, 300);
         window.setLayout(new FlowLayout());
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -424,6 +424,11 @@ public class Main {
         var alumFlatLengthZ = new JTextField(2);
         alumFlatLengthZ.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Length Z\"=", "in", ALUM_FLAT_BAR_CONFIG_PATH));
         window.add(alumFlatLengthZ);
+
+        window.add(new JLabel("Alum Flat Bar Placement Z Offset: "));
+        var alumFlatBarPlacementZOffset = new JTextField(2);
+        alumFlatBarPlacementZOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Aluminum Flat Bar 90deg Placement Z Offset\"=", "in", COVER_ASSEMBLY_CONFIG_PATH));
+        window.add(alumFlatBarPlacementZOffset);
 
         window.setVisible(true);
     }
@@ -465,6 +470,11 @@ public class Main {
         var cutawayDiameterInputBox = new JTextField(2);
         cutawayDiameterInputBox.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame ID Cutaway Diameter\"=", "in", false, false));
         window.add(cutawayDiameterInputBox);
+
+        window.add(new JLabel("Angle Frame Placement Z Offset: "));
+        var angleFramePlacementZOffset = new JTextField(2);
+        angleFramePlacementZOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame Placement Z Offset\"=", "in", false, false));
+        window.add(angleFramePlacementZOffset);
 
         window.setVisible(true);
     }
@@ -729,7 +739,7 @@ public class Main {
     private static void displayAssemblyHandleConfigWindow() {
         var window = new JFrame("Cover Assembly Handle Configurer");
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        window.setSize(175, 150);
+        window.setSize(275, 250);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
 
@@ -745,24 +755,37 @@ public class Main {
             }
         }
 
-        var handleGTBoxLabel = coverHasHandle ? "Handle GT Box Bool: " : "No Active Handle Found ";
+        var handleGTBoxLabel = coverHasHandle ? "GT Box 0deg Bool: " : "No Active Handle Found ";
         var label = new JLabel(handleGTBoxLabel);
         window.add(label);
 
         if (coverHasHandle) {
             var textBox = new JTextField(1);
-            textBox.addActionListener(e -> handleBoolAction(e, "GT Box"));
+            textBox.addActionListener(e -> handleBoolAction(e, "GT Box 0deg"));
             window.add(textBox);
+
+            var GTBox90degLabel = new JLabel("GT Box 90deg Bool: ");
+            window.add(GTBox90degLabel);
+            var GTBox90degBox = new JTextField(1);
+            GTBox90degBox.addActionListener(e -> handleBoolAction(e, "GT Box 90deg"));
+            window.add(GTBox90degBox);
 
             var handleBoolLabel = new JLabel("Handle 0deg Bool: ");
             window.add(handleBoolLabel);
             var handleBoolTextBox = new JTextField(1);
             handleBoolTextBox.addActionListener(e -> handleBoolAction(e, "Handle 0deg"));
             window.add(handleBoolTextBox);
+
+            var handle90degBoolLabel = new JLabel("Handle 90deg Bool: ");
+            window.add(handle90degBoolLabel);
+            var handle90debBox = new JTextField(1);
+            handle90debBox.addActionListener(e -> handleBoolAction(e, "Handle 90deg"));
+            window.add(handle90debBox);
         }
 
         window.setVisible(true);
     }
+
     // This handles assembly features that are bool only input and derive X/Z location from
     // part config and app data offset table
     private static void handleBoolAction(ActionEvent event, String assemblyFeature){
@@ -1058,7 +1081,11 @@ public class Main {
 
         var endIndex = line.contains("9") ? startIndex + 5 : startIndex + 4;
 
-        type = line.substring(startIndex, endIndex);
+        try {
+            type = line.substring(startIndex, endIndex);
+        } catch (StringIndexOutOfBoundsException exception) {
+            System.out.println(line);
+        }
 
         return type.trim();
     }
@@ -1082,6 +1109,8 @@ public class Main {
         return line.contains("X");
     }
 
+    // sets cover shape selection
+    // references: blob.coverConfig.txt; L1 - blob.cover.SLDASM
     private static void setCoverSelectionAssemblyConfig() {
         // get config lines
         var configLines = FilesUtil.read(COVER_SHAPE_ASSEMBLY_CONFIG_PATH).split("\n");
@@ -1166,7 +1195,7 @@ public class Main {
 
     private static void displayBaseCoverParamsConfigWindow(String windowTitle, String variableName) {
         var window = new JFrame(windowTitle);
-        window.setSize(300, 500);
+        window.setSize(300, 700);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
