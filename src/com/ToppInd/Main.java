@@ -394,6 +394,43 @@ public class Main {
         window.add(angleFrameButton());
         window.add(alumFlatBarButton());
         window.add(lockPlateButton());
+        window.add(hingesButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton hingesButton() {
+        var button = new JButton("Hinges");
+        button.addActionListener(e -> displayHingesConfigWindow());
+        return button;
+    }
+
+    private static void displayHingesConfigWindow() {
+        var window = new JFrame("Hinge Configurer");
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setSize(300, 300);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+
+        window.add(new JLabel("Bolt-In Hinges Bool: "));
+        var boolBox = new JTextField(1);
+        boolBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"Bolt-In Hinge Bool\"="));
+        window.add(boolBox);
+
+        window.add(new JLabel("Bolt-In Hinges Z Offset: "));
+        var zOffset = new JTextField(2);
+        zOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Bolt-In Hinge Z Offset\"=", "in"));
+        window.add(zOffset);
+
+        window.add(new JLabel("Bolt-In Hinge 1 X Offset: "));
+        var xOneOffset = new JTextField(2);
+        xOneOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Bolt-In Hinge 1 X Offset\"=", "in"));
+        window.add(xOneOffset);
+
+        window.add(new JLabel("Bolt-In Hinge 2 X Offset: "));
+        var xTwoOffset = new JTextField(2);
+        xTwoOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Bolt-In Hinge 2 X Offset\"=", "in"));
+        window.add(xTwoOffset);
 
         window.setVisible(true);
     }
