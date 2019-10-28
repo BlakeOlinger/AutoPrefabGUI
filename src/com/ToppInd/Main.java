@@ -27,6 +27,11 @@ public class Main {
     private static final Path COVER_DRAWING_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverDrawing.txt");
     private static final Path COVER_ASSEMBLY_PATH = Paths.get(PATH_BASE + "blob - L2\\blob.L2_cover.SLDASM");
     private static final Path COVER_DRAWING_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.SLDDRW");
+    private static final HashMap<Integer, Path> HOLE_FEATURE_CONFIG_MAP = new HashMap<>(
+            Map.of(
+                    1, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_1.txt")
+            )
+    );
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
     private static String coverShapeSelection = "Circular";
@@ -36,8 +41,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = true;
-    private static final boolean WRITEABLE = true;
+    private static final boolean REBUILDABLE = false;
+    private static final boolean WRITEABLE = false;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
@@ -1377,10 +1382,11 @@ public class Main {
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
-// TODO - refactor this to use the corresponding hole feature assembly - will require a new assembly and config for each
-//  - hole
+
             // read blob.L2_cover.txt file and split into lines
             var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
+            var holePath = getHolePath(variableName);
+            var holeConfigLines = getLinesFromPath(holePath);
 
             // get user selection - forces default "none" if nothing is selected on confirm
             var userSelection = "";
@@ -1393,7 +1399,7 @@ public class Main {
             // populate a line number - feature bool map
             var lineNumberFeatureBoolTable = new HashMap<Integer, String>();
             var index = 0;
-            for (String line : coverAssemblyConfigLines) {
+            for (String line : holeConfigLines) {
                 if (line.contains("Bool") && !line.contains("IIF")) {
                     lineNumberFeatureBoolTable.put(index, line);
                 }
@@ -1401,11 +1407,11 @@ public class Main {
             }
 
             // set the bool state of the hole (variable name) and feature selected
-            // for the assembly config.txt file - writes later
+            // for the hole config.txt file - writes now
             for (int lineNumber : lineNumberFeatureBoolTable.keySet()) {
                 var line = lineNumberFeatureBoolTable.get(lineNumber);
                 // check if line in assembly config.txt contains user selected hole number
-                if (line.contains(variableName) && line.contains("Bool") &&
+                if (line.contains("Bool") &&
                 !line.contains("IIF")) {
                     if (line.contains(userSelection)) {
                         var featureSelectedVariable = line.split("=")[1].trim();
@@ -1418,12 +1424,15 @@ public class Main {
                         }
                         // set rest to 0
                     } else {
-                        var newLine = coverAssemblyConfigLines[lineNumber].split("=")[0].trim() + "= 0";
-                        coverAssemblyConfigLines[lineNumber] = newLine;
+                        var newLine = holeConfigLines[lineNumber].split("=")[0].trim() + "= 0";
+                        holeConfigLines[lineNumber] = newLine;
+                        // TODO - refactor to work with ecg 2 hole
                     }
                 }
             }
-
+            var output = generateWriteOutput(holeConfigLines);
+            writeToConfig(output, holePath);
+outputLines(output);
             // read part config.txt for the variable name (hole number) and X/Z negative state - read only
             // only care about the current variable name (hole number) X/Z
             var partConfigXZNegationStateTable = new HashMap<String, Boolean>();
@@ -1516,6 +1525,7 @@ public class Main {
                     }
                 }
             }
+
             // display rebuild app data and all hole part assembly negations
             if (ASSEMBLY_MATE_CALIBRATION) {
                 System.out.println("\n\n\n");
@@ -1592,20 +1602,22 @@ public class Main {
         return coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
     }
 
-    // TODO - refactor the feature radio button bool to read from feature_bool_# file
+    private static Path getHolePath(String hole) {
+        var holeNumber = Integer.parseInt(hole.split(" ")[1].trim());
+        return HOLE_FEATURE_CONFIG_MAP.get(holeNumber);
+    }
+
     private static JRadioButton[] holeAssemblyConfigRadios(String variableName) {
         var featureStringList = new StringBuilder();
         featureStringList.append("none");
         featureStringList.append("!");
-        var assemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
+        var holePath = getHolePath(variableName);
+
+        var assemblyConfigLines = FilesUtil.read(holePath).split("\n");
 
         for (String line : assemblyConfigLines) {
-            if (line.contains(variableName) && line.contains("Bool") &&
-            !line.contains("IIF")) {
-                var feature = line.split(variableName)[1].split("=")[0]
-                        .replace("\"", "")
-                        .replace("Bool", "")
-                        .trim();
+            if (line.contains("Bool") && !line.contains("IIF")) {
+                var feature = line.split("=")[0].replace("Bool", "").replace("\"", "");
                 featureStringList.append(feature);
                 featureStringList.append("!");
             }
