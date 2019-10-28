@@ -393,6 +393,33 @@ public class Main {
         window.add(handleButton());
         window.add(angleFrameButton());
         window.add(alumFlatBarButton());
+        window.add(lockPlateButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton lockPlateButton() {
+        var button = new JButton("Lock Plate");
+        button.addActionListener(Main::displayLockPlateConfigWindow);
+        return button;
+    }
+
+    private static void displayLockPlateConfigWindow(ActionEvent event) {
+        var window = new JFrame("Lock Plate Configurer");
+        window.setSize(300, 300);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        window.add(new JLabel("Lock Plate Bool: "));
+        var textBox = new JTextField(1);
+        textBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"Hatch Lock Plate Bool\"="));
+        window.add(textBox);
+
+        window.add(new JLabel("Lock Plate Z Offset: "));
+        var offsetBox = new JTextField(2);
+        offsetBox.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Hatch Lock Plate Z Offset\"=", "in"));
+        window.add(offsetBox);
 
         window.setVisible(true);
     }
@@ -414,6 +441,11 @@ public class Main {
         var alumFlatBoolBox = new JTextField(1);
         alumFlatBoolBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"Aluminum Flat Bar 0deg Bool\"="));
         window.add(alumFlatBoolBox);
+
+        window.add(new JLabel("Alum Flat 90deg Bool: "));
+        var alumFlat90BoolBox = new JTextField(1);
+        alumFlat90BoolBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"Aluminum Flat Bar 90deg Bool\"="));
+        window.add(alumFlat90BoolBox);
 
         window.add(new JLabel("Alum Flat Bar X Length: "));
         var alumFlatLengthX = new JTextField(2);
@@ -468,12 +500,12 @@ public class Main {
 
         window.add(new JLabel("Angle Frame ID Cutaway Diameter: "));
         var cutawayDiameterInputBox = new JTextField(2);
-        cutawayDiameterInputBox.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame ID Cutaway Diameter\"=", "in", false, false));
+        cutawayDiameterInputBox.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame ID Cutaway Diameter\"=", "in"));
         window.add(cutawayDiameterInputBox);
 
         window.add(new JLabel("Angle Frame Placement Z Offset: "));
         var angleFramePlacementZOffset = new JTextField(2);
-        angleFramePlacementZOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame Placement Z Offset\"=", "in", false, false));
+        angleFramePlacementZOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Angle Frame Placement Z Offset\"=", "in"));
         window.add(angleFramePlacementZOffset);
 
         window.setVisible(true);
@@ -506,7 +538,7 @@ public class Main {
     }
 
     // refactor to Assembly Util API - general assembly dimension handler
-    private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, boolean isMateDimension, boolean canBeNegative) {
+    private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units) {
         // the two booleans are going to point to calls to external methods
         var userInput = getUserTextInput(event);
         if (userInput != null) {
@@ -1195,7 +1227,7 @@ public class Main {
 
     private static void displayBaseCoverParamsConfigWindow(String windowTitle, String variableName) {
         var window = new JFrame(windowTitle);
-        window.setSize(300, 700);
+        window.setSize(300, 900);
         window.setLocationRelativeTo(null);
         window.setLayout(new FlowLayout());
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
