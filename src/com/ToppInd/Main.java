@@ -1377,7 +1377,8 @@ public class Main {
     private static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
         var button = new JButton("Confirm");
         button.addActionListener(e -> {
-
+// TODO - refactor this to use the corresponding hole feature assembly - will require a new assembly and config for each
+//  - hole
             // read blob.L2_cover.txt file and split into lines
             var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
@@ -1591,6 +1592,7 @@ public class Main {
         return coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
     }
 
+    // TODO - refactor the feature radio button bool to read from feature_bool_# file
     private static JRadioButton[] holeAssemblyConfigRadios(String variableName) {
         var featureStringList = new StringBuilder();
         featureStringList.append("none");
