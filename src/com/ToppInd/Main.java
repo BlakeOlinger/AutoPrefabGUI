@@ -395,6 +395,38 @@ public class Main {
         window.add(alumFlatBarButton());
         window.add(lockPlateButton());
         window.add(hingesButton());
+        window.add(armButton());
+
+        window.setVisible(true);
+    }
+
+    private static JButton armButton() {
+        var button = new JButton("Hatch Arm");
+        button.addActionListener(e -> displayHatchArmConfigWindow());
+        return button;
+    }
+
+    private static void displayHatchArmConfigWindow() {
+        var window = new JFrame("Hatch Arm Configurer");
+        window.setSize(300, 300);
+        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        window.setLocationRelativeTo(null);
+        window.setLayout(new FlowLayout());
+
+        window.add(new JLabel("Hatch Arm Bool: "));
+        var boolBox = new JTextField(1);
+        boolBox.addActionListener(e -> assemblyBoolActionHandler(e, "\"Arm Bool\"="));
+        window.add(boolBox);
+
+        window.add(new JLabel("Hatch Arm X Offset: "));
+        var xOffset = new JTextField(2);
+        xOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Arm X Offset\"=", "in"));
+        window.add(xOffset);
+
+        window.add(new JLabel("Hatch Arm Z Offset: "));
+        var zOffset = new JTextField(2);
+        zOffset.addActionListener(e -> assemblyDimensionActionHandler(e, "\"Arm Z Offset\"=", "in"));
+        window.add(zOffset);
 
         window.setVisible(true);
     }
