@@ -62,39 +62,31 @@ public class Main {
     // TODO - in the auto-dimension daemon - have daemon search for 0" dimensions and unmark for drawing those - mark else
     // TODO - Pack And Go - define the algorithm and user interaction
     // TODO - BOM - auto-delete rows based on a lookup table - not sure if I'll go white/black list
+    // TODO - on selection of a hole feature - ECG 2 Hole for example - automatically set the diameter and BC properties
     // TODO - (long-term/down time) - need to refactor the mess that is this monolithic class
     // TODO - (after previous/next phase) - begin general prefab - utilize lookup tables and wrapper assemblies
     //          - utilize separate *.SLDDRW files per sheet and auto-copy past into final drawing doc each sheet
+    // TODO - eff it - prefab now - modeling initial success condition after - SO:324900
+    //  - various thoughts in no particular order:
+    //      - config prefab button
+    //      - require 3 individual *.SLDDRW files for each sheet
+    //      - copy paste into final
+    //      - configure pump - selection
+    //      - config all the various bits base XYZ placement on lookup tables
+    //      - adapt drawing config to handle sheets - cover, wet well1, wet well2, prefab BOM etc
+    //      - config basin window
+    //      - maybe don't have individual sheets in different files - cover/prefab okay, any more then BOM difficult to transfer
+
+    static Path getCoverDrawingConfigPath() {
+        return COVER_DRAWING_CONFIG_PATH;
+    }
+    static Path getRebuildDaemonAppDataPath() {
+        return REBUILD_DAEMON_APP_DATA_PATH;
+    }
 
     public static void main(String[] args) {
         // display main window
          displayAppWindow();
-    }
-
-    private static void setUserInputParametersTable() {
-        for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
-            coverConfigVariableUserInputTable.put(variable, "");
-        }
-    }
-
-    private static void setCoverConfigVariableNameLineNumberTable(Path path) {
-        // read cover config contents
-        var coverConfigContent = FilesUtil.read(path);
-
-        // split by new line
-        var coverConfigLines = coverConfigContent.split("\n");
-
-        // create line to line number relationship for each variable
-        var index = 0;
-        // sort by line NOT contains @ or "IIF" - increment index each line - if NOT HashMap.put()
-        for (String line : coverConfigLines) {
-            if (!line.contains("@") && !line.contains("IIF") && !line.contains("Negative")){
-                // get variable name from line
-                var variableName = line.split("=")[0];
-                coverConfigVariableNameLineNumberTable.put(variableName, index);
-            }
-            ++index;
-        }
     }
 
     private static void displayAppWindow() {
@@ -107,17 +99,15 @@ public class Main {
         // add "Configure Cover" button
         window.add(configureCoverButton());
 
+        // add "Configure Prefab" button
+        window.add(Prefab.Button.getButton());
+
         // add "Build Drawing" button
-        window.add(configureDrawingButton());
+        window.add(Drawing.Button.configureDrawingButton());
 
         window.setVisible(true);
     }
 
-    private static JButton configureDrawingButton() {
-        var button = new JButton("Configure Drawing");
-        button.addActionListener(e -> displayConfigureDrawingWindow());
-        return button;
-    }
 // drawing configurer
     private static void displayConfigureDrawingWindow() {
         var window = new JFrame("Drawing Configurer");
@@ -177,7 +167,7 @@ public class Main {
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        var propertyLabels = getPropertyLabels();
+        var propertyLabels = Util.Path.getLabelsFromLines("Property", Main.COVER_DRAWING_CONFIG_PATH);
         for (JLabel label : propertyLabels) {
             window.add(label);
             var textBox = new JTextField(10);
@@ -192,7 +182,7 @@ public class Main {
 
     private static JButton documentPropertiesSetAsDefaultsButton() {
         var button = new JButton("Default");
-        button.addActionListener(e -> handleDocumentPropertyAction());
+        button.addActionListener(e -> handleDocumentPropertyAction("Property", "<>", ""));
         return button;
     }
 
@@ -201,14 +191,14 @@ public class Main {
         var userInput = getUserTextInput(event);
 
         if (userInput != null) {
-            var configLines = getLinesFromPath(COVER_DRAWING_CONFIG_PATH);
+            var configLines = Util.Path.getLinesFromPath(COVER_DRAWING_CONFIG_PATH);
 
             var index = 0;
             for (String line : configLines) {
                 if (line.contains("Property")) {
                     var identifier = text.replace(":", "").trim();
                     if (line.contains(identifier)) {
-                        var newLine = getNewLineUserInput(line, userInput, "");
+                        var newLine = Util.UserInput.getNewLineFromUserInput(line, userInput, "");
                         configLines[index] = newLine;
                     }
                 }
@@ -222,45 +212,6 @@ public class Main {
 
             rebuild(DaemonProgram.DRAWING_PROPERTIES);
         }
-    }
-
-    // this resets the values to their defaults
-    private static void handleDocumentPropertyAction() {
-        var configLines = getLinesFromPath(COVER_DRAWING_CONFIG_PATH);
-        var index = 0;
-        for (String line : configLines) {
-            if (line.contains("Property")) {
-                var newLine = getNewLineUserInput(line, "<>", "");
-                configLines[index] = newLine;
-            }
-            ++index;
-        }
-
-        var output = generateWriteOutput(configLines);
-        writeToConfig(output, COVER_DRAWING_CONFIG_PATH);
-
-        writeToConfig(COVER_DRAWING_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-
-        rebuild(DaemonProgram.DRAWING_PROPERTIES);
-    }
-
-    private static JLabel[] getPropertyLabels() {
-        var configLines = getLinesFromPath(Main.COVER_DRAWING_CONFIG_PATH);
-        var returnLabelTotal = 0;
-        for (String line : configLines) {
-            if (line.contains("Property")) {
-                ++returnLabelTotal;
-            }
-        }
-        var labels = new JLabel[returnLabelTotal];
-        var labelIndex = 0;
-        for (String line : configLines) {
-            if (line.contains("Property")) {
-                var text = line.split(":")[1].split("=")[0].replace("\"", "").trim() + ": ";
-                labels[labelIndex++] = new JLabel(text);
-            }
-        }
-        return labels;
     }
 
     private static JButton drawingViewScaleButton() {
@@ -340,7 +291,8 @@ public class Main {
         setCoverSelectionAssemblyConfig();
 
         // read cover config contents and set cover config variable table
-        setCoverConfigVariableNameLineNumberTable(shapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH);
+        Util.SetMap.setCoverConfigVariableNameLineNumberTable(getCoverConfigPath(),
+                coverConfigVariableNameLineNumberTable);
 
         // define total number of hole features to know the number of hole feature buttons to produce
         var holeFeatures = 0;
@@ -350,7 +302,8 @@ public class Main {
         }
 
         // set user input parameters table based on cover config variable table
-        setUserInputParametersTable();
+        Util.UserInput.setVariableUserInputMap(coverConfigVariableNameLineNumberTable,
+                coverConfigVariableUserInputTable);
 
         window.add(coverParamsButton("Base Cover", e -> displayBaseCoverParamsConfigWindow(
                 "Base Cover Parameters", "Cover")));
@@ -368,7 +321,7 @@ public class Main {
     }
 
     private static void setAssemblySquareCenterMark() {
-        var configLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
+        var configLines = Util.Path.getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
         var identifier = "Square Center Mark";
         var index = 0;
         var writeNeeded = false;
@@ -611,11 +564,11 @@ public class Main {
         // the two booleans are going to point to calls to external methods
         var userInput = getUserTextInput(event);
         if (userInput != null) {
-            var assemblyConfigLines = getLinesFromPath(configPath);
+            var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
             var dimensionLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
 
             for (int lineNumber : dimensionLineNumberTable.keySet()) {
-                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, units);
+                var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber], userInput, units);
 
                 assemblyConfigLines[lineNumber] = newLine;
             }
@@ -637,11 +590,11 @@ public class Main {
         // the two booleans are going to point to calls to external methods
         var userInput = getUserTextInput(event);
         if (userInput != null) {
-            var assemblyConfigLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
+            var assemblyConfigLines = Util.Path.getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
             var dimensionLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
 
             for (int lineNumber : dimensionLineNumberTable.keySet()) {
-                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, units);
+                var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber], userInput, units);
 
                 assemblyConfigLines[lineNumber] = newLine;
             }
@@ -662,11 +615,11 @@ public class Main {
     private static void assemblyBoolActionHandler(ActionEvent event, String line) {
         var userInput = getUserTextInput(event);
         if (userInput != null) {
-            var assemblyConfigLines = getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
+            var assemblyConfigLines = Util.Path.getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
             var boolLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
 
             for (int lineNumber : boolLineNumberTable.keySet()) {
-                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, "");
+                var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber], userInput, "");
 
                 assemblyConfigLines[lineNumber] = newLine;
             }
@@ -687,11 +640,11 @@ public class Main {
     private static void assemblyBoolActionHandler(ActionEvent event, String line, Path configPath) {
         var userInput = getUserTextInput(event);
         if (userInput != null) {
-            var assemblyConfigLines = getLinesFromPath(configPath);
+            var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
             var boolLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
 
             for (int lineNumber : boolLineNumberTable.keySet()) {
-                var newLine = getNewLineUserInput(assemblyConfigLines[lineNumber], userInput, "");
+                var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber], userInput, "");
 
                 assemblyConfigLines[lineNumber] = newLine;
             }
@@ -713,7 +666,7 @@ public class Main {
 
         // if user input is not null
         if (userInput != null) {
-            var partConfigLines = getLinesFromPath(ANGLE_FRAME_CONFIG_PATH);
+            var partConfigLines = Util.Path.getLinesFromPath(ANGLE_FRAME_CONFIG_PATH);
 
             var lineIdentifier = "\"" + XZ + " Clear Access\"=";
 
@@ -737,11 +690,6 @@ public class Main {
             // send rebuild command
             rebuild(DaemonProgram.ASSEMBLY_GENERAL);
         }
-    }
-
-    // refactor to Util API - general use
-    private static String getNewLineUserInput(String original, String userInput, String units) {
-        return original.split("=")[0].trim() + "= " + userInput + units;
     }
 
     // refactor to Util API - general use
@@ -799,11 +747,6 @@ public class Main {
         for (String line : map.keySet()) {
             System.out.println(line);
         }
-    }
-
-    // refactor to Util API - general use
-    private static String[] getLinesFromPath(Path path) {
-        return FilesUtil.read(path).split("\n");
     }
 
     // refactor to Util API - general use
@@ -969,7 +912,7 @@ public class Main {
 
                                 // if mismatched set assembly config line to match part config line
                                 if (partAssemblyBoolMismatch) {
-                                    var newLine = getNewLineUserInput(assemblyConfigLine, userInput, "");
+                                    var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLine, userInput, "");
 
                                     assemblyConfigLines[assemblyConfigLineNumber] = newLine;
                                 }
@@ -1054,7 +997,7 @@ public class Main {
                 for (int assemblyConfigLineNumber : assemblyConfigLineNumberVariableListTable.keySet()) {
                     var assemblyConfigLine = assemblyConfigLineNumberVariableListTable.get(assemblyConfigLineNumber);
                     if (assemblyConfigLine.contains("Bool")) {
-                        var newLine = getNewLineUserInput(assemblyConfigLine, userInput, "");
+                        var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLine, userInput, "");
                         assemblyConfigLines[assemblyConfigLineNumber] = newLine;
                     }
                 }
@@ -1408,7 +1351,7 @@ public class Main {
             var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
             var holePath = getHolePath(variableName);
 
-            var holeConfigLines = getLinesFromPath(holePath);
+            var holeConfigLines = Util.Path.getLinesFromPath(holePath);
 
             // get user selection - forces default "none" if nothing is selected on confirm
             var userSelection = "";
