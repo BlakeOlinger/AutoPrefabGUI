@@ -29,7 +29,12 @@ public class Main {
     private static final Path COVER_DRAWING_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.SLDDRW");
     private static final HashMap<Integer, Path> HOLE_FEATURE_CONFIG_MAP = new HashMap<>(
             Map.of(
-                    1, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_1.txt")
+                    1, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_1.txt"),
+                    2, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_2.txt"),
+                    3, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_3.txt"),
+                    4, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_4.txt"),
+                    5, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_5.txt"),
+                    6, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_6.txt")
             )
     );
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
@@ -1386,6 +1391,7 @@ public class Main {
             // read blob.L2_cover.txt file and split into lines
             var coverAssemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
             var holePath = getHolePath(variableName);
+
             var holeConfigLines = getLinesFromPath(holePath);
 
             // get user selection - forces default "none" if nothing is selected on confirm
