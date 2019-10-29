@@ -49,6 +49,20 @@ public class Main {
     private static final boolean REBUILDABLE = true;
     private static final boolean WRITEABLE = true;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
+    // TODO - incorporate lookup tables
+    //  - 1) write to a configuration selection app data file
+    //      - the length and width of hatch
+    //  - 2) from that config app data file set relative offsets
+    //      - such as GT Box, Handle, Hatch Arm, etc. based on a
+    //      - lookup table for that feature
+    // TODO - automate blob.* based part descriptions
+    //  - 1) do this based on a lookup table for the part - cover/2in angle frame/etc.
+    //      - utilize <> variables that will substitute current user defined values for diameter etc.
+    // TODO - define an appropriate algorithm and lookup table scheme for including drawing notes
+    // TODO - in the auto-dimension daemon - have daemon search for 0" dimensions and unmark for drawing those - mark else
+    // TODO - Pack And Go - define the algorithm and user interaction
+    // TODO - (QUICK) - have *.SLDDRW Drawing View2 view scale match Drawing View1
+    // TODO - BOM - auto-delete rows based on a lookup table - not sure if I'll go white/black list
 
     public static void main(String[] args) {
         // display main window
