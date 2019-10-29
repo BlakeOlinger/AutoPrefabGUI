@@ -61,7 +61,6 @@ public class Main {
     // TODO - define an appropriate algorithm and lookup table scheme for including drawing notes
     // TODO - in the auto-dimension daemon - have daemon search for 0" dimensions and unmark for drawing those - mark else
     // TODO - Pack And Go - define the algorithm and user interaction
-    // TODO - (QUICK) - have *.SLDDRW Drawing View2 view scale match Drawing View1
     // TODO - BOM - auto-delete rows based on a lookup table - not sure if I'll go white/black list
     // TODO - (long-term/down time) - need to refactor the mess that is this monolithic class
     // TODO - (after previous/next phase) - begin general prefab - utilize lookup tables and wrapper assemblies
