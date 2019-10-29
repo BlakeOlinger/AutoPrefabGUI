@@ -63,6 +63,9 @@ public class Main {
     // TODO - Pack And Go - define the algorithm and user interaction
     // TODO - (QUICK) - have *.SLDDRW Drawing View2 view scale match Drawing View1
     // TODO - BOM - auto-delete rows based on a lookup table - not sure if I'll go white/black list
+    // TODO - (long-term/down time) - need to refactor the mess that is this monolithic class
+    // TODO - (after previous/next phase) - begin general prefab - utilize lookup tables and wrapper assemblies
+    //          - utilize separate *.SLDDRW files per sheet and auto-copy past into final drawing doc each sheet
 
     public static void main(String[] args) {
         // display main window
