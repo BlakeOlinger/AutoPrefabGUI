@@ -41,8 +41,8 @@ public class Main {
                     "6061 Alloy", "1"
             )
     );
-    private static final boolean REBUILDABLE = false;
-    private static final boolean WRITEABLE = false;
+    private static final boolean REBUILDABLE = true;
+    private static final boolean WRITEABLE = true;
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
 
     public static void main(String[] args) {
@@ -1391,7 +1391,7 @@ public class Main {
             // get user selection - forces default "none" if nothing is selected on confirm
             var userSelection = "";
             try {
-                userSelection = buttonGroup.getSelection().getActionCommand();
+                userSelection = buttonGroup.getSelection().getActionCommand().trim();
             } catch (NullPointerException exception) {
                 userSelection = "none";
             }
@@ -1413,26 +1413,25 @@ public class Main {
                 // check if line in assembly config.txt contains user selected hole number
                 if (line.contains("Bool") &&
                 !line.contains("IIF")) {
-                    if (line.contains(userSelection)) {
+                    if (line.replace("\"", "").contains(userSelection)) {
                         var featureSelectedVariable = line.split("=")[1].trim();
                         var isFeatureCurrentlySelected = featureSelectedVariable.contains("1");
-
                         // if feature isn't selected set it to selected
                         if (!isFeatureCurrentlySelected) {
-                            var newLine = coverAssemblyConfigLines[lineNumber].split("=")[0].trim() + "= 1";
-                            coverAssemblyConfigLines[lineNumber] = newLine;
+                            var newLine = holeConfigLines[lineNumber].split("=")[0].trim() + "= 1";
+                            holeConfigLines[lineNumber] = newLine;
                         }
                         // set rest to 0
                     } else {
                         var newLine = holeConfigLines[lineNumber].split("=")[0].trim() + "= 0";
                         holeConfigLines[lineNumber] = newLine;
-                        // TODO - refactor to work with ecg 2 hole
                     }
                 }
             }
-            var output = generateWriteOutput(holeConfigLines);
-            writeToConfig(output, holePath);
-outputLines(output);
+            var writeOutput = generateWriteOutput(holeConfigLines);
+            writeToConfig(writeOutput, holePath);
+            rebuild(DaemonProgram.BASIC_REBUILD);
+
             // read part config.txt for the variable name (hole number) and X/Z negative state - read only
             // only care about the current variable name (hole number) X/Z
             var partConfigXZNegationStateTable = new HashMap<String, Boolean>();
@@ -1503,10 +1502,13 @@ outputLines(output);
             var assemblyConfigXZOffsetLineNumberStringList = new StringBuilder();
             index = 0;
             for (String line : coverAssemblyConfigLines) {
-                if (line.contains(variableName) && line.contains("Offset") &&
-                line.contains("in")) {
-                    assemblyConfigXZOffsetLineNumberStringList.append(index);
-                    assemblyConfigXZOffsetLineNumberStringList.append(" ");
+                if (line.contains(variableName)) {
+                    if (line.contains("Offset")) {
+                        if (line.contains("in")) {
+                            assemblyConfigXZOffsetLineNumberStringList.append(index);
+                            assemblyConfigXZOffsetLineNumberStringList.append(" ");
+                        }
+                    }
                 }
                 ++index;
             }
@@ -1514,6 +1516,7 @@ outputLines(output);
 
             // set cover assembly lines for hole number offset to part config dimension
             for (String lineNumber : assemblyConfigOffsetLineNumberArray) {
+//                System.out.println(lineNumber);
                 var asInt = Integer.parseInt(lineNumber);
                 for (String offset : partConfigOffsetTable.keySet()) {
                     var line = coverAssemblyConfigLines[asInt];
@@ -1552,7 +1555,7 @@ outputLines(output);
             // ask to do so first if damn thing is going to flip mates
             if (rebuildAppData.toString().contains("Distance")) {
                 var window = new JFrame("Confirm");
-                window.setSize(300, 300);
+                window.setSize(400, 600);
                 window.setLayout(new FlowLayout());
                 window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                 window.setLocationRelativeTo(null);
@@ -1569,6 +1572,13 @@ outputLines(output);
                 });
                 window.add(yesButton);
                 var noButton = new JButton("Cancel");
+
+                // show mates about to flip
+                window.add(new JLabel("Mates to flip:"));
+                var mateLines = rebuildAppData.toString().split("\n");
+                for (var i = 1; i < mateLines.length; ++i) {
+                    window.add(new JLabel(mateLines[i]));
+                }
                 noButton.addActionListener(e1 -> window.dispose());
                 window.add(noButton);
                 window.setVisible(true);
