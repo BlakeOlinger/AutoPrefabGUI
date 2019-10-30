@@ -31,13 +31,13 @@ final class Cover {
 
         static JButton baseCoverParamsBuildButton(String variableName) {
             var button = new JButton("Build");
-            button.addActionListener(e -> writeBaseCoverChanges(variableName));
+            button.addActionListener(e -> ActionHandler.writeBaseCoverChanges(variableName));
             return button;
         }
 
         static JButton selectMaterialButton() {
             var button = new JButton("Material");
-            button.addActionListener(e -> displaySelectMaterialWindow());
+            button.addActionListener(e -> Window.displaySelectMaterialWindow());
             return button;
         }
 
@@ -289,6 +289,36 @@ final class Cover {
             button.addActionListener(e -> Window.displayAngleFrameConfigWindow());
             return button;
         }
+
+        static JButton alumFlatBarButton() {
+            var button = new JButton("Alum Flat Bar");
+            button.addActionListener(e -> Window.displayAlumFlatConfigWindow());
+            return button;
+        }
+
+        static JButton lockPlateButton() {
+            var button = new JButton("Lock Plate");
+            button.addActionListener(e -> Window.displayLockPlateConfigWindow());
+            return button;
+        }
+
+        static JButton hingesButton() {
+            var button = new JButton("Hinges");
+            button.addActionListener(e -> Window.displayHingesConfigWindow());
+            return button;
+        }
+
+        static JButton armButton() {
+            var button = new JButton("Hatch Arm");
+            button.addActionListener(e -> Window.displayHatchArmConfigWindow());
+            return button;
+        }
+
+        static JButton materialConfigButton(String material) {
+            var button = new JButton(material);
+            button.addActionListener(e -> ActionHandler.writeMaterialConfig(material));
+            return button;
+        }
     }
 
     static class ActionHandler {
@@ -367,6 +397,33 @@ final class Cover {
                 var newText = Util.Output.generateWriteOutput(assemblyConfigLines);
                 Util.Output.writeToConfig(newText, Main.getCoverAssemblyConfigPath(),
                         Main.getWritable());
+
+                // call rebuild daemon
+                Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
+            }
+        }
+
+        static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, Path configPath) {
+            // the two booleans are going to point to calls to external methods
+            var userInput = Util.UserInput.getUserTextInput(event);
+            if (userInput != null) {
+                var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
+                var dimensionLineNumberTable = Util.Map.getSingleLineNumberTable(assemblyConfigLines, line);
+
+                for (int lineNumber : dimensionLineNumberTable.keySet()) {
+                    var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
+                            userInput, units);
+
+                    assemblyConfigLines[lineNumber] = newLine;
+                }
+
+                // write app data
+                Util.Output.writeToConfig(configPath.toString(), Main.getRebuildDaemonAppDataPath(),
+                        Main.getWritable());
+
+                // generate and write config.txt data
+                var newText = Util.Output.generateWriteOutput(assemblyConfigLines);
+                Util.Output.writeToConfig(newText, configPath, Main.getWritable());
 
                 // call rebuild daemon
                 Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
@@ -745,6 +802,152 @@ final class Cover {
                 Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
             }
         }
+
+        static void writeMaterialConfig(String material) {
+            var configLines = FilesUtil.read(Main.getCoverShapeSelection().contains("Square") ?
+                    Main.getSquareCoverConfigPath() : Main.getCoverConfigPath()).split("\n");
+            for (var i = 0; i < configLines.length; ++i) {
+                if (configLines[i].split("=")[0].contains("Material")) {
+                    configLines[i] = configLines[i].replace(configLines[i].split("=")[1],
+                            " " + Main.getMaterialConfigTable().get(material));
+                }
+            }
+
+            var builder = new StringBuilder();
+            for (String line : configLines) {
+                builder.append(line);
+                builder.append("\n");
+            }
+
+            // write material config to selected config.txt file
+            Util.Output.writeToConfig(builder.toString(), Util.Path.getCoverConfigPath(),
+                    Main.getWritable());
+
+            // write selected config.txt path to rebuild.txt app data
+            Util.Output.writeToConfig(Util.Path.getCoverConfigPath().toString(),
+                    Main.getRebuildDaemonAppDataPath(), Main.getWritable());
+
+            // call rebuild for AutoMaterialConfig.appref-ms
+            Util.Build.rebuild(DaemonProgram.MATERIAL_CONFIG, Main.getBuildable());
+        }
+
+        private static void writeBaseCoverChanges(String variableName) {
+            var coverConfigPath = Main.getCoverShapeSelection().contains("Square") ?
+                    Main.getSquareCoverConfigPath() : Main.getCoverConfigPath();
+            var coverConfigContentLines = FilesUtil.read(coverConfigPath).split("\n");
+
+            // gets cover variables - user input and appends the line with the changed value to the lines array
+            for (String userInputVariable : Main.getCoverConfigVariableUserInputTable().keySet()) {
+                if (userInputVariable.contains(variableName) &&
+                        !Main.getCoverConfigVariableUserInputTable().get(userInputVariable).isEmpty()) {
+                    var variableLineNumber = Main.getCoverConfigVariableNameLineNumberTable().get(userInputVariable);
+                    var lineSuffix = "";
+                    if (coverConfigContentLines[variableLineNumber].contains("in")) {
+                        lineSuffix = "in";
+                    } else if (coverConfigContentLines[variableLineNumber].contains("deg") &&
+                            !coverConfigContentLines[variableLineNumber].contains("Bool")) {
+                        lineSuffix = "deg";
+                    }
+
+                    var userVariable = Main.getCoverConfigVariableUserInputTable().get(userInputVariable);
+
+                    var newLine = userInputVariable + "= " + userVariable + lineSuffix;
+                    coverConfigContentLines[variableLineNumber] = newLine;
+                }
+            }
+
+
+            // check for variableName matching user input and if null - generate user input table for this variableName
+            var offsetUserInputTable = new HashMap<String, String>();
+            for (String userInput : Main.getCoverConfigVariableUserInputTable().keySet()) {
+                if (userInput.contains(variableName) && userInput.contains("Offset") &&
+                        !userInput.contains("Degree")) {
+                    var userOffset = Main.getCoverConfigVariableUserInputTable().get(userInput).isEmpty() ?
+                            "null" : Main.getCoverConfigVariableUserInputTable().get(userInput);
+                    offsetUserInputTable.put(userInput, userOffset);
+                }
+            }
+
+            // generate table of hole/X/Z - line numbers
+            var holeZXLineNumberTable = new HashMap<Integer, String>();
+            // generate table of line number - negative hole/x/z
+            var negativeXZStringList = new StringBuilder();
+            var index = 0;
+            for (String line : coverConfigContentLines) {
+                if (line.contains("in") && line.contains("Offset")) {
+                    holeZXLineNumberTable.put(index, line);
+                } else if (line.contains("Negative")) {
+                    negativeXZStringList.append(line);
+                    negativeXZStringList.append("!");
+                }
+                ++index;
+            }
+            var negativeXZArray = negativeXZStringList.toString().split("!");
+
+            for (int lineNumber : holeZXLineNumberTable.keySet()) {
+                var line = coverConfigContentLines[lineNumber];
+                for (String negation : negativeXZArray) {
+                    var holeNumber = "";
+                    var isNegative = false;
+                    if (negation.contains("Handle")) {
+                        holeNumber = negation.split(" ")[2].trim() + " " + negation.split(" ")[3].trim();
+                        isNegative = negation.split("=")[1].contains("1");
+                    } else {
+                        holeNumber = negation.split("CA")[0].replace("\"", "").trim();
+                        isNegative = negation.split("=")[1].contains("1");
+                    }
+                    try {
+                        var XorZ = "";
+                        if (negation.contains("CA")) {
+                            XorZ = negation.split("CA")[1].split("Negative")[0];
+                        } else if (negation.contains("Handle")) {
+                            XorZ = negation.split("deg")[1].split("Negative")[0].trim();
+                        }
+                        if (line.contains(holeNumber) && isNegative && line.contains(XorZ)) {
+                            if (line.contains(variableName)) {
+                                var lineVariable = line.split("=")[0];
+                                var userInput = offsetUserInputTable.get(lineVariable);
+                                var isUserInputNull = userInput.contains("null");
+                                if (isUserInputNull) {
+                                    var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= -" +
+                                            coverConfigContentLines[lineNumber].split("=")[1].trim();
+                                    coverConfigContentLines[lineNumber] = newLine;
+                                } else {
+                                    var isUserInputNegative = userInput.contains("-");
+                                    if (isUserInputNegative) {
+                                        var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= " +
+                                                coverConfigContentLines[lineNumber].split("=")[1].trim();
+                                        coverConfigContentLines[lineNumber] = newLine;
+
+                                    }
+                                }
+                            } else {
+                                var newLine = coverConfigContentLines[lineNumber].split("=")[0] + "= -" +
+                                        coverConfigContentLines[lineNumber].split("=")[1].trim();
+                                coverConfigContentLines[lineNumber] = newLine;
+                            }
+                        }
+                    } catch (ArrayIndexOutOfBoundsException exception) {
+                        System.out.println(negation);
+                    }
+                }
+            }
+
+            // write updated content to file
+            var builder = new StringBuilder();
+            for (String line : coverConfigContentLines) {
+                builder.append(line);
+                builder.append("\n");
+            }
+            Util.Output.writeToConfig(builder.toString(), coverConfigPath, Main.getWritable());
+
+            // write path app data to rebuild.txt
+            Util.Output.writeToConfig(coverConfigPath.toString(), Main.getRebuildDaemonAppDataPath(),
+                    Main.getWritable());
+
+            // call auto-rebuild daemon
+            Util.Build.rebuild(DaemonProgram.REBUILD, Main.getBuildable());
+        }
     }
 
     static class Window {
@@ -899,10 +1102,10 @@ final class Cover {
 
             window.add(Button.handleButton());
             window.add(Button.angleFrameButton());
-            window.add(alumFlatBarButton());
-            window.add(lockPlateButton());
-            window.add(hingesButton());
-            window.add(armButton());
+            window.add(Button.alumFlatBarButton());
+            window.add(Button.lockPlateButton());
+            window.add(Button.hingesButton());
+            window.add(Button.armButton());
 
             window.setVisible(true);
         }
@@ -996,6 +1199,143 @@ final class Cover {
             angleFramePlacementZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"Angle Frame Placement Z Offset\"=", "in"));
             window.add(angleFramePlacementZOffset);
+
+            window.setVisible(true);
+        }
+
+        static void displayAlumFlatConfigWindow() {
+            var window = new JFrame("Assembly Alum Flat Bar Config");
+            window.setSize(300, 300);
+            window.setLayout(new FlowLayout());
+            window.setLocationRelativeTo(null);
+            window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+            window.add(new JLabel("Alum Flat 0deg Bool: "));
+            var alumFlatBoolBox = new JTextField(1);
+            alumFlatBoolBox.addActionListener(e -> Cover.ActionHandler.assemblyBoolActionHandler(e,
+                    "\"Aluminum Flat Bar 0deg Bool\"="));
+            window.add(alumFlatBoolBox);
+
+            window.add(new JLabel("Alum Flat 90deg Bool: "));
+            var alumFlat90BoolBox = new JTextField(1);
+            alumFlat90BoolBox.addActionListener(e -> Cover.ActionHandler.assemblyBoolActionHandler(e,
+                    "\"Aluminum Flat Bar 90deg Bool\"="));
+            window.add(alumFlat90BoolBox);
+
+            window.add(new JLabel("Alum Flat Bar X Length: "));
+            var alumFlatLengthX = new JTextField(2);
+            alumFlatLengthX.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Length X\"=", "in", Main.getAlumFlatBarConfigPath()));
+            window.add(alumFlatLengthX);
+
+            window.add(new JLabel("Alum Flat Bar Z Length: "));
+            var alumFlatLengthZ = new JTextField(2);
+            alumFlatLengthZ.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Length Z\"=", "in", Main.getAlumFlatBarConfigPath()));
+            window.add(alumFlatLengthZ);
+
+            window.add(new JLabel("Alum Flat Bar Placement Z Offset: "));
+            var alumFlatBarPlacementZOffset = new JTextField(2);
+            alumFlatBarPlacementZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Aluminum Flat Bar 90deg Placement Z Offset\"=", "in",
+                    Main.getCoverAssemblyConfigPath()));
+            window.add(alumFlatBarPlacementZOffset);
+
+            window.setVisible(true);
+        }
+
+        static void displayLockPlateConfigWindow() {
+            var window = new JFrame("Lock Plate Configurer");
+            window.setSize(300, 300);
+            window.setLocationRelativeTo(null);
+            window.setLayout(new FlowLayout());
+            window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+            window.add(new JLabel("Lock Plate Bool: "));
+            var textBox = new JTextField(1);
+            textBox.addActionListener(e -> Cover.ActionHandler.assemblyBoolActionHandler(e,
+                    "\"Hatch Lock Plate Bool\"="));
+            window.add(textBox);
+
+            window.add(new JLabel("Lock Plate Z Offset: "));
+            var offsetBox = new JTextField(2);
+            offsetBox.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Hatch Lock Plate Z Offset\"=", "in"));
+            window.add(offsetBox);
+
+            window.setVisible(true);
+        }
+
+        static void displayHingesConfigWindow() {
+            var window = new JFrame("Hinge Configurer");
+            window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            window.setSize(300, 300);
+            window.setLocationRelativeTo(null);
+            window.setLayout(new FlowLayout());
+
+            window.add(new JLabel("Bolt-In Hinges Bool: "));
+            var boolBox = new JTextField(1);
+            boolBox.addActionListener(e -> Cover.ActionHandler.assemblyBoolActionHandler(e,
+                    "\"Bolt-In Hinge Bool\"="));
+            window.add(boolBox);
+
+            window.add(new JLabel("Bolt-In Hinges Z Offset: "));
+            var zOffset = new JTextField(2);
+            zOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Bolt-In Hinge Z Offset\"=", "in"));
+            window.add(zOffset);
+
+            window.add(new JLabel("Bolt-In Hinge 1 X Offset: "));
+            var xOneOffset = new JTextField(2);
+            xOneOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Bolt-In Hinge 1 X Offset\"=", "in"));
+            window.add(xOneOffset);
+
+            window.add(new JLabel("Bolt-In Hinge 2 X Offset: "));
+            var xTwoOffset = new JTextField(2);
+            xTwoOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Bolt-In Hinge 2 X Offset\"=", "in"));
+            window.add(xTwoOffset);
+
+            window.setVisible(true);
+        }
+
+        static void displayHatchArmConfigWindow() {
+            var window = new JFrame("Hatch Arm Configurer");
+            window.setSize(300, 300);
+            window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            window.setLocationRelativeTo(null);
+            window.setLayout(new FlowLayout());
+
+            window.add(new JLabel("Hatch Arm Bool: "));
+            var boolBox = new JTextField(1);
+            boolBox.addActionListener(e -> Cover.ActionHandler.assemblyBoolActionHandler(e, "\"Arm Bool\"="));
+            window.add(boolBox);
+
+            window.add(new JLabel("Hatch Arm X Offset: "));
+            var xOffset = new JTextField(2);
+            xOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Arm X Offset\"=", "in"));
+            window.add(xOffset);
+
+            window.add(new JLabel("Hatch Arm Z Offset: "));
+            var zOffset = new JTextField(2);
+            zOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Arm Z Offset\"=", "in"));
+            window.add(zOffset);
+
+            window.setVisible(true);
+        }
+
+        static void displaySelectMaterialWindow() {
+            var window = new JFrame("Select Material");
+            window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            window.setSize(300, 300);
+            window.setLayout(new FlowLayout());
+            window.setLocationRelativeTo(null);
+
+            window.add(Button.materialConfigButton("ASTM A36 Steel"));
+            window.add(Button.materialConfigButton("6061 Alloy"));
 
             window.setVisible(true);
         }

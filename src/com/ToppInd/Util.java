@@ -197,4 +197,33 @@ final class Util {
             return line.contains("X");
         }
     }
+
+    static class Debug {
+        static void outputLines(String... lines) {
+            for (String line : lines) {
+                System.out.println(line);
+            }
+        }
+
+        static void outputLines(String line, int integer) {
+            System.out.println(line);
+            System.out.println(integer + "");
+        }
+
+        static <T> void outputLines(T line) {
+            System.out.println(line);
+        }
+
+        static void outputLines(HashMap<Integer, String> map) {
+            for (String line : map.values()) {
+                System.out.println(line);
+            }
+        }
+
+        static void outputLines(HashMap<String, Boolean> map, boolean isStringInt) {
+            for (String line : map.keySet()) {
+                System.out.println(line);
+            }
+        }
+    }
 }
