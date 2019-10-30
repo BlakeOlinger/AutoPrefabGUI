@@ -95,6 +95,12 @@ final class Util {
             }
             return labels;
         }
+
+        static java.nio.file.Path getCoverConfigPath() {
+            return Main.getCoverShapeSelection().contains("Square") ?
+                    Main.getSquareCoverConfigPath() :
+                    Main.getCoverConfigPath();
+        }
     }
 
     static class Output {

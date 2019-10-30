@@ -5,7 +5,6 @@ import bo.core.system.FilesUtil;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -14,18 +13,42 @@ import java.util.Map;
 public class Main {
     private static final String PATH_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\";
     private static final Path COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.txt");
+    static Path getCoverConfigPath() {
+        return COVER_CONFIG_PATH;
+    }
     private static final Path SQUARE_COVER_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverSquare.txt");
+    static Path getSquareCoverConfigPath() {
+        return SQUARE_COVER_CONFIG_PATH;
+    }
     private static final Path COVER_SHAPE_ASSEMBLY_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverConfig.txt");
+    static Path getCoverShapeAssemblyConfigPath() {
+        return COVER_ASSEMBLY_CONFIG_PATH;
+    }
     private static final Path REBUILD_DAEMON_APP_DATA_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\rebuild.txt");
+    static Path getRebuildDaemonAppDataPath() {
+        return REBUILD_DAEMON_APP_DATA_PATH;
+    }
     private static final String APP_DATA_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\";
     private static final Path APP_DATA_HANDLE_OFFSET_TABLE = Paths.get(APP_DATA_BASE + "assembly handle offset table.txt");
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
+    static Path getCoverAssemblyConfigPath() {
+        return COVER_ASSEMBLY_CONFIG_PATH;
+    }
     private static final Path ANGLE_FRAME_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.2inAngleFrame.txt");
     private static final Path ALUM_FLAT_BAR_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.alumFlatBar.txt");
     private static final Path INSPECTION_PLATE_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.inspectionPlate.txt");
     private static final Path COVER_DRAWING_CONFIG_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.coverDrawing.txt");
+    static Path getCoverDrawingConfigPath() {
+        return COVER_DRAWING_CONFIG_PATH;
+    }
     private static final Path COVER_ASSEMBLY_PATH = Paths.get(PATH_BASE + "blob - L2\\blob.L2_cover.SLDASM");
+    static Path getCoverAssemblyPath() {
+        return COVER_ASSEMBLY_PATH;
+    }
     private static final Path COVER_DRAWING_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.SLDDRW");
+    static Path getCoverDrawingPath() {
+        return COVER_DRAWING_PATH;
+    }
     private static final HashMap<Integer, Path> HOLE_FEATURE_CONFIG_MAP = new HashMap<>(
             Map.of(
                     1, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_1.txt"),
@@ -37,8 +60,20 @@ public class Main {
             )
     );
     private static HashMap<String, Integer> coverConfigVariableNameLineNumberTable = new HashMap<>();
+    static HashMap<String, Integer> getCoverConfigVariableNameLineNumberTable() {
+        return coverConfigVariableNameLineNumberTable;
+    }
     private static HashMap<String, String> coverConfigVariableUserInputTable = new HashMap<>();
+    static HashMap<String, String> getCoverConfigVariableUserInputTable() {
+        return coverConfigVariableUserInputTable;
+    }
     private static String coverShapeSelection = "Circular";
+    static String getCoverShapeSelection() {
+        return coverShapeSelection;
+    }
+    static void setCoverShapeSelection(String shapeSelection) {
+        coverShapeSelection = shapeSelection;
+    }
     private static final HashMap<String, String> MATERIAL_CONFIG_TABLE = new HashMap<>(
             Map.of(
                     "ASTM A36 Steel", "0",
@@ -82,22 +117,6 @@ public class Main {
     //      - config basin window
     //      - maybe don't have individual sheets in different files - cover/prefab okay, any more then BOM difficult to transfer
 
-    static Path getCoverDrawingConfigPath() {
-        return COVER_DRAWING_CONFIG_PATH;
-    }
-    static Path getRebuildDaemonAppDataPath() {
-        return REBUILD_DAEMON_APP_DATA_PATH;
-    }
-    static Path getCoverAssemblyPath() {
-        return COVER_ASSEMBLY_PATH;
-    }
-    static Path getCoverShapeAssemblyConfigPath() {
-        return COVER_ASSEMBLY_CONFIG_PATH;
-    }
-    static Path getCoverDrawingPath() {
-        return COVER_DRAWING_PATH;
-    }
-
     public static void main(String[] args) {
         // display main window
          displayAppWindow();
@@ -111,7 +130,7 @@ public class Main {
         window.setLayout(new FlowLayout());
 
         // add "Configure Cover" button
-        window.add(configureCoverButton());
+        window.add(Cover.Button.configureCoverButton());
 
         // add "Configure Prefab" button
         window.add(Prefab.Button.getButton());
@@ -122,116 +141,6 @@ public class Main {
         window.setVisible(true);
     }
 
-    private static JButton configureCoverButton() {
-        var button = new JButton("Configure Cover");
-        button.addActionListener(e -> displayCoverShapeSelector());
-        return button;
-    }
-
-    private static void displayCoverShapeSelector() {
-        var window = new JFrame("Select Shape");
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        window.setSize(200, 150);
-        window.setLocationRelativeTo(null);
-        window.setLayout(new FlowLayout());
-
-        var circleSelectButton = new JButton("Circular");
-        circleSelectButton.addActionListener(e -> displayCoverConfigWindow("Circular"));
-        var squareSelectButton = new JButton("Square");
-        squareSelectButton.addActionListener(e -> displayCoverConfigWindow("Square"));
-
-        window.add(circleSelectButton);
-        window.add(squareSelectButton);
-
-        window.setVisible(true);
-    }
-// cover configurer
-    private static void displayCoverConfigWindow(String shapeSelection) {
-        var window = new JFrame("Cover Configurer");
-        window.setLayout(new FlowLayout());
-        window.setSize(400, 300);
-        window.setLocationRelativeTo(null);
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        coverShapeSelection = shapeSelection;
-
-        // if square write to assembly config "Square Center Mark"= 1 else = 0
-        setAssemblySquareCenterMark();
-
-        // set cover selection assembly config
-        setCoverSelectionAssemblyConfig();
-
-        // read cover config contents and set cover config variable table
-        Util.SetMap.setVariableLineNumberMap(getCoverConfigPath(),
-                coverConfigVariableNameLineNumberTable);
-
-        // define total number of hole features to know the number of hole feature buttons to produce
-        var holeFeatures = 0;
-        for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
-            if (!variable.matches("[^0-9]*") && variable.contains("Hole"))
-                holeFeatures = Math.max(Integer.parseInt(variable.split(" ")[1]), holeFeatures);
-        }
-
-        // set user input parameters table based on cover config variable table
-        Util.UserInput.setVariableUserInputMap(coverConfigVariableNameLineNumberTable,
-                coverConfigVariableUserInputTable);
-
-        window.add(coverParamsButton("Base Cover", e -> displayBaseCoverParamsConfigWindow(
-                "Base Cover Parameters", "Cover")));
-        for (var i = 1; i <= holeFeatures; ++i) {
-            int finalI = i;
-            window.add(coverParamsButton("Hole " + i, e -> displayBaseCoverParamsConfigWindow(
-                    "Hole " + finalI + " Parameters", "Hole " + finalI)
-            ));
-        }
-        window.add(selectMaterialButton());
-
-        window.add(coverAssemblyConfigureButton());
-
-        window.setVisible(true);
-    }
-
-    private static void setAssemblySquareCenterMark() {
-        var configLines = Util.Path.getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
-        var identifier = "Square Center Mark";
-        var index = 0;
-        var writeNeeded = false;
-
-        // set config line square center mark based on current setting and user shape selection
-        for (String line : configLines) {
-            if (line.contains(identifier) && !line.contains("IIF")) {
-                var currentStateIsOne = line.contains("1");
-                var selectionIsSquare = coverShapeSelection.contains("Square");
-                var newLine = "";
-                if (!currentStateIsOne && selectionIsSquare) {
-                    newLine = line.replace("0", "1");
-                    configLines[index] = newLine;
-                    writeNeeded = true;
-                } else if (currentStateIsOne && !selectionIsSquare) {
-                    newLine = line.replace("1", "0");
-                    configLines[index] = newLine;
-                    writeNeeded = true;
-                }
-            }
-            ++index;
-        }
-
-        if (writeNeeded) {
-            var newText = Util.Output.generateWriteOutput(configLines);
-
-            Util.Output.writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
-
-            Util.Output.writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
-
-            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, REBUILDABLE);
-        }
-    }
-
-    private static JButton coverAssemblyConfigureButton() {
-        var button = new JButton("Cover Assembly Configurer");
-        button.addActionListener(e -> displayCoverAssemblyConfigWindow());
-        return button;
-    }
 // cover assembly feature configurer window
     private static void displayCoverAssemblyConfigWindow() {
         var window = new JFrame("General Assembly Feature Configurer");
@@ -542,7 +451,6 @@ public class Main {
             var lineIdentifier = "\"" + XZ + " Clear Access\"=";
 
             var lineNumberTable = getSingleLineNumberTable(partConfigLines, lineIdentifier);
-            outputLines(lineNumberTable);
 
             for (int lineNumber : lineNumberTable.keySet()) {
                 var newLine = lineNumberTable.get(lineNumber).split("=")[0].trim() +
@@ -552,7 +460,7 @@ public class Main {
             }
 
             // write app data
-            Util.Output.writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
+            Util.Output.writeToConfig(Util.Path.getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
             // write to assembly config
             var newText = Util.Output.generateWriteOutput(partConfigLines);
@@ -671,7 +579,7 @@ public class Main {
 
         // disable config assembly handle if no part config.txt handle is active
         var coverHasHandle = false;
-        var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+        var partConfigLines = FilesUtil.read(Util.Path.getCoverConfigPath()).split("\n");
         for (String line : partConfigLines) {
             if (line.contains("Handle") && line.contains("Bool") &&
             !line.contains("IIF")) {
@@ -717,7 +625,7 @@ public class Main {
     private static void handleBoolAction(ActionEvent event, String assemblyFeature){
         var userInput = Util.UserInput.getUserTextInput(event);
         if (userInput != null) {
-            var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+            var partConfigLines = FilesUtil.read(Util.Path.getCoverConfigPath()).split("\n");
             var assemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
 
             // populate a part config.txt line number - variable list table
@@ -1035,41 +943,6 @@ public class Main {
         return line.contains("X");
     }
 
-    // sets cover shape selection
-    // references: blob.coverConfig.txt; L1 - blob.cover.SLDASM
-    private static void setCoverSelectionAssemblyConfig() {
-        // get config lines
-        var configLines = FilesUtil.read(COVER_SHAPE_ASSEMBLY_CONFIG_PATH).split("\n");
-
-        // set new value from user cover shape selection
-        for (var i = 0; i < configLines.length; ++i) {
-            if (configLines[i].contains("Configuration") &&
-            !configLines[i].contains("IIF")) {
-                configLines[i] = "Configuration = " + (coverShapeSelection.contains("Square") ? "2" : "1");
-            }
-        }
-
-        // write new value to cover shape assembly config
-        var builder = new StringBuilder();
-        for (String line : configLines) {
-            builder.append(line);
-            builder.append("\n");
-        }
-        Util.Output.writeToConfig(builder.toString(), COVER_SHAPE_ASSEMBLY_CONFIG_PATH, WRITEABLE);
-
-        // set rebuild.txt app data to cover shape assembly config path
-        Util.Output.writeToConfig(COVER_SHAPE_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
-
-        // call assembly rebuild daemon
-        Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, REBUILDABLE);
-    }
-
-    private static JButton selectMaterialButton() {
-        var button = new JButton("Material");
-        button.addActionListener(e -> displaySelectMaterialWindow());
-        return button;
-    }
-
     private static void displaySelectMaterialWindow() {
         var window = new JFrame("Select Material");
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -1104,78 +977,13 @@ public class Main {
         }
 
         // write material config to selected config.txt file
-        Util.Output.writeToConfig(builder.toString(), getCoverConfigPath(), WRITEABLE);
+        Util.Output.writeToConfig(builder.toString(), Util.Path.getCoverConfigPath(), WRITEABLE);
 
         // write selected config.txt path to rebuild.txt app data
-        Util.Output.writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
+        Util.Output.writeToConfig(Util.Path.getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
         // call rebuild for AutoMaterialConfig.appref-ms
         Util.Build.rebuild(DaemonProgram.MATERIAL_CONFIG, REBUILDABLE);
-    }
-
-    private static JButton coverParamsButton(String label, ActionListener actionListener) {
-        var button = new JButton(label);
-        button.addActionListener(actionListener);
-        return button;
-    }
-
-    private static void displayBaseCoverParamsConfigWindow(String windowTitle, String variableName) {
-        var window = new JFrame(windowTitle);
-        window.setSize(300, 900);
-        window.setLocationRelativeTo(null);
-        window.setLayout(new FlowLayout());
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        window.add(new JLabel("Instructions:"));
-        window.add(new JLabel(" After each input press Enter to 'set' the value."));
-        window.add(new JLabel(" Click the Build button to generate the model."));
-
-        for (String variable : coverConfigVariableNameLineNumberTable.keySet()) {
-            if (variable.contains(variableName)) {
-                window.add(new JLabel(variable + ": "));
-                var textInput = new JTextField( 4);
-                textInput.addActionListener(e -> coverConfigVariableUserInputTable.put(variable, e.getActionCommand()));
-                window.add(textInput);
-            }
-        }
-
-        if (!windowTitle.contains("Base Cover"))
-            window.add(holeAssemblyConfigButton(variableName));
-
-        window.add(baseCoverParamsBuildButton(variableName));
-
-        window.setVisible(true);
-    }
-
-    private static JButton holeAssemblyConfigButton(String variableName) {
-        var button = new JButton("Assembly Config");
-        button.addActionListener(e -> holeAssemblyConfigWindow(variableName));
-        return button;
-    }
-
-    private static void holeAssemblyConfigWindow(String variableName) {
-        var window = new JFrame(variableName + " Assembly Configuration");
-        window.setSize(300, 400);
-        window.setLocationRelativeTo(null);
-        window.setLayout(new FlowLayout());
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        var radioButtons = holeAssemblyConfigRadios(variableName);
-        var buttonGroup = new ButtonGroup();
-
-        for (JRadioButton radioButton : radioButtons) {
-            buttonGroup.add(radioButton);
-        }
-
-        for (JRadioButton radioButton : radioButtons) {
-            window.add(radioButton);
-        }
-
-        window.add(inspectionPlateConfigButton(variableName));
-
-        window.add(confirmHoleAssemblyConfigButton(variableName, buttonGroup));
-
-        window.setVisible(true);
     }
 
     private static JButton inspectionPlateConfigButton(String variableName) {
@@ -1256,7 +1064,7 @@ public class Main {
             // read part config.txt for the variable name (hole number) and X/Z negative state - read only
             // only care about the current variable name (hole number) X/Z
             var partConfigXZNegationStateTable = new HashMap<String, Boolean>();
-            var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
+            var partConfigLines = FilesUtil.read(Util.Path.getCoverConfigPath()).split("\n");
             for (String line : partConfigLines) {
                 if (line.contains("Negative") && line.contains(variableName)) {
                     var isNegative = line.split("=")[1].contains("1");
@@ -1424,48 +1232,9 @@ public class Main {
         return holeNumber;
     }
 
-    private static Path getCoverConfigPath() {
-        return coverShapeSelection.contains("Square") ? SQUARE_COVER_CONFIG_PATH : COVER_CONFIG_PATH;
-    }
-
     private static Path getHolePath(String hole) {
         var holeNumber = Integer.parseInt(hole.split(" ")[1].trim());
         return HOLE_FEATURE_CONFIG_MAP.get(holeNumber);
-    }
-
-    private static JRadioButton[] holeAssemblyConfigRadios(String variableName) {
-        var featureStringList = new StringBuilder();
-        featureStringList.append("none");
-        featureStringList.append("!");
-        var holePath = getHolePath(variableName);
-
-        var assemblyConfigLines = FilesUtil.read(holePath).split("\n");
-
-        for (String line : assemblyConfigLines) {
-            if (line.contains("Bool") && !line.contains("IIF")) {
-                var feature = line.split("=")[0].replace("Bool", "").replace("\"", "");
-                featureStringList.append(feature);
-                featureStringList.append("!");
-            }
-        }
-
-        var featureArray = featureStringList.toString().split("!");
-
-        var radioButtonArray = new JRadioButton[featureArray.length];
-        var index = 0;
-        for (String feature : featureArray) {
-            radioButtonArray[index] = new JRadioButton(feature);
-            radioButtonArray[index].setActionCommand(feature);
-            ++index;
-        }
-
-        return radioButtonArray;
-    }
-
-    private static JButton baseCoverParamsBuildButton(String variableName) {
-        var button = new JButton("Build");
-        button.addActionListener(e -> writeBaseCoverChanges(variableName));
-        return button;
     }
 
     private static void writeBaseCoverChanges(String variableName) {
