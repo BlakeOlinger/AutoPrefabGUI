@@ -6,7 +6,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -47,7 +46,13 @@ public class Main {
             )
     );
     private static final boolean REBUILDABLE = true;
+    static boolean getBuildable() {
+        return REBUILDABLE;
+    }
     private static final boolean WRITEABLE = true;
+    static boolean getWritable() {
+        return WRITEABLE;
+    }
     private static final boolean ASSEMBLY_MATE_CALIBRATION = false;
     // TODO - incorporate lookup tables
     //  - 1) write to a configuration selection app data file
@@ -83,6 +88,15 @@ public class Main {
     static Path getRebuildDaemonAppDataPath() {
         return REBUILD_DAEMON_APP_DATA_PATH;
     }
+    static Path getCoverAssemblyPath() {
+        return COVER_ASSEMBLY_PATH;
+    }
+    static Path getCoverShapeAssemblyConfigPath() {
+        return COVER_ASSEMBLY_CONFIG_PATH;
+    }
+    static Path getCoverDrawingPath() {
+        return COVER_DRAWING_PATH;
+    }
 
     public static void main(String[] args) {
         // display main window
@@ -106,149 +120,6 @@ public class Main {
         window.add(Drawing.Button.configureDrawingButton());
 
         window.setVisible(true);
-    }
-
-// drawing configurer
-    private static void displayConfigureDrawingWindow() {
-        var window = new JFrame("Drawing Configurer");
-        window.setSize(300, 300);
-        window.setLocationRelativeTo(null);
-        window.setLayout(new FlowLayout());
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        window.add(customPropertiesButton());
-        window.add(drawingViewScaleButton());
-        window.add(generateDimensionsButton());
-        window.add(autoBalloonButton());
-        window.add(autoCenterMarkButton());
-
-        window.setVisible(true);
-    }
-
-    private static JButton autoCenterMarkButton() {
-        var button = new JButton("Center Mark");
-        button.addActionListener(e -> rebuild(DaemonProgram.CENTER_MARK));
-        return button;
-    }
-
-    private static JButton autoBalloonButton() {
-        var button = new JButton("Feature Balloon");
-        button.addActionListener(e -> rebuild(DaemonProgram.AUTO_BALLOON));
-        return button;
-    }
-
-    private static JButton generateDimensionsButton() {
-        var button = new JButton("Generate Dimensions");
-        button.addActionListener(e -> handleDrawingGenerateDimensionsAction());
-        return button;
-    }
-
-    private static void handleDrawingGenerateDimensionsAction() {
-        // for now it is just a passive activator aside from writing the appropriate paths to app data
-        var appData = COVER_ASSEMBLY_PATH + "\n";
-        appData += COVER_ASSEMBLY_CONFIG_PATH + "\n";
-        appData += COVER_DRAWING_PATH;
-
-        writeToConfig(appData, REBUILD_DAEMON_APP_DATA_PATH);
-
-        rebuild(DaemonProgram.DRAWING_AUTO_DIMENSION);
-    }
-
-    private static JButton customPropertiesButton() {
-        var button = new JButton("Document Info");
-        button.addActionListener(e -> displayCustomPropertiesConfigWindow());
-        return button;
-    }
-
-    private static void displayCustomPropertiesConfigWindow() {
-        var window = new JFrame("Document Information Configurer");
-        window.setSize(225, 500);
-        window.setLayout(new FlowLayout());
-        window.setLocationRelativeTo(null);
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        var propertyLabels = Util.Path.getLabelsFromLines("Property", Main.COVER_DRAWING_CONFIG_PATH);
-        for (JLabel label : propertyLabels) {
-            window.add(label);
-            var textBox = new JTextField(10);
-            textBox.addActionListener(e -> handleDocumentPropertyAction(e, label));
-            window.add(textBox);
-        }
-
-        window.add(documentPropertiesSetAsDefaultsButton());
-
-        window.setVisible(true);
-    }
-
-    private static JButton documentPropertiesSetAsDefaultsButton() {
-        var button = new JButton("Default");
-        button.addActionListener(e -> handleDocumentPropertyAction("Property", "<>", ""));
-        return button;
-    }
-
-    private static void handleDocumentPropertyAction(ActionEvent event, JLabel label) {
-        var text = label.getText();
-        var userInput = getUserTextInput(event);
-
-        if (userInput != null) {
-            var configLines = Util.Path.getLinesFromPath(COVER_DRAWING_CONFIG_PATH);
-
-            var index = 0;
-            for (String line : configLines) {
-                if (line.contains("Property")) {
-                    var identifier = text.replace(":", "").trim();
-                    if (line.contains(identifier)) {
-                        var newLine = Util.UserInput.getNewLineFromUserInput(line, userInput, "");
-                        configLines[index] = newLine;
-                    }
-                }
-                ++index;
-            }
-
-            var output = generateWriteOutput(configLines);
-            writeToConfig(output, COVER_DRAWING_CONFIG_PATH);
-
-            writeToConfig(COVER_DRAWING_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-
-            rebuild(DaemonProgram.DRAWING_PROPERTIES);
-        }
-    }
-
-    private static JButton drawingViewScaleButton() {
-        var button = new JButton("Drawing View Scale");
-        button.addActionListener(e -> displayDrawingViewScaleConfigWindow());
-        return button;
-    }
-
-    private static void displayDrawingViewScaleConfigWindow() {
-        var window = new JFrame("Drawing Scale View Configurer");
-        window.setSize(250, 300);
-        window.setLocationRelativeTo(null);
-        window.setLayout(new FlowLayout());
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        window.add(new JLabel("Drawing View 1 Scale: "));
-        var drawView1Box = new JTextField(2);
-        drawView1Box.addActionListener(Main::handleDrawingScaleViewAction);
-        window.add(drawView1Box);
-
-        window.setVisible(true);
-    }
-
-    private static void handleDrawingScaleViewAction(ActionEvent event) {
-        var userInput = getUserTextInput(event);
-
-        if (userInput != null) {
-            var drawingViewOut = "\"Drawing View 1 Scale\"= " + userInput;
-
-            // write to app data
-            writeToConfig(COVER_DRAWING_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-
-            // write to drawing config
-            writeToConfig(drawingViewOut, COVER_DRAWING_CONFIG_PATH);
-
-            rebuild(DaemonProgram.DRAWING_VIEW_SCALE);
-        }
     }
 
     private static JButton configureCoverButton() {
@@ -291,7 +162,7 @@ public class Main {
         setCoverSelectionAssemblyConfig();
 
         // read cover config contents and set cover config variable table
-        Util.SetMap.setCoverConfigVariableNameLineNumberTable(getCoverConfigPath(),
+        Util.SetMap.setVariableLineNumberMap(getCoverConfigPath(),
                 coverConfigVariableNameLineNumberTable);
 
         // define total number of hole features to know the number of hole feature buttons to produce
@@ -346,13 +217,13 @@ public class Main {
         }
 
         if (writeNeeded) {
-            var newText = generateWriteOutput(configLines);
+            var newText = Util.Output.generateWriteOutput(configLines);
 
-            writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH);
+            Util.Output.writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
-            writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            Util.Output.writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
-            rebuild(DaemonProgram.BASIC_REBUILD);
+            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, REBUILDABLE);
         }
     }
 
@@ -562,7 +433,7 @@ public class Main {
     // refactor to Assembly Util API - general assembly dimension handler
     private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, Path configPath) {
         // the two booleans are going to point to calls to external methods
-        var userInput = getUserTextInput(event);
+        var userInput = Util.UserInput.getUserTextInput(event);
         if (userInput != null) {
             var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
             var dimensionLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
@@ -574,21 +445,21 @@ public class Main {
             }
 
             // write app data
-            writeToConfig(configPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            Util.Output.writeToConfig(configPath.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
             // generate and write config.txt data
-            var newText = generateWriteOutput(assemblyConfigLines);
-            writeToConfig(newText, configPath);
+            var newText = Util.Output.generateWriteOutput(assemblyConfigLines);
+            Util.Output.writeToConfig(newText, configPath, WRITEABLE);
 
             // call rebuild daemon
-            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
         }
     }
 
     // refactor to Assembly Util API - general assembly dimension handler
     private static void assemblyDimensionActionHandler(ActionEvent event, String line, String units) {
         // the two booleans are going to point to calls to external methods
-        var userInput = getUserTextInput(event);
+        var userInput = Util.UserInput.getUserTextInput(event);
         if (userInput != null) {
             var assemblyConfigLines = Util.Path.getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
             var dimensionLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
@@ -600,20 +471,20 @@ public class Main {
             }
 
             // write app data
-            writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            Util.Output.writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
             // generate and write config.txt data
-            var newText = generateWriteOutput(assemblyConfigLines);
-            writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH);
+            var newText = Util.Output.generateWriteOutput(assemblyConfigLines);
+            Util.Output.writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
             // call rebuild daemon
-            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
         }
     }
 
     // refactor to Assembly Util API - general assembly bool handler
     private static void assemblyBoolActionHandler(ActionEvent event, String line) {
-        var userInput = getUserTextInput(event);
+        var userInput = Util.UserInput.getUserTextInput(event);
         if (userInput != null) {
             var assemblyConfigLines = Util.Path.getLinesFromPath(COVER_ASSEMBLY_CONFIG_PATH);
             var boolLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
@@ -625,20 +496,20 @@ public class Main {
             }
 
             // write app data
-            writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            Util.Output.writeToConfig(COVER_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
             // generate and write new lines
-            var newText = generateWriteOutput(assemblyConfigLines);
-            writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH);
+            var newText = Util.Output.generateWriteOutput(assemblyConfigLines);
+            Util.Output.writeToConfig(newText, COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
             // call rebuild daemon
-            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
         }
     }
 
     // refactor to Assembly Util API - general assembly bool handler
     private static void assemblyBoolActionHandler(ActionEvent event, String line, Path configPath) {
-        var userInput = getUserTextInput(event);
+        var userInput = Util.UserInput.getUserTextInput(event);
         if (userInput != null) {
             var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
             var boolLineNumberTable = getSingleLineNumberTable(assemblyConfigLines, line);
@@ -650,19 +521,19 @@ public class Main {
             }
 
             // write app data
-            writeToConfig(configPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            Util.Output.writeToConfig(configPath.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
             // generate and write new lines
-            var newText = generateWriteOutput(assemblyConfigLines);
-            writeToConfig(newText, configPath);
+            var newText = Util.Output.generateWriteOutput(assemblyConfigLines);
+            Util.Output.writeToConfig(newText, configPath, WRITEABLE);
 
             // call rebuild daemon
-            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
         }
     }
 
     private static void handleAngleFrameLength(ActionEvent event, String XZ) {
-        var userInput = getUserTextInput(event);
+        var userInput = Util.UserInput.getUserTextInput(event);
 
         // if user input is not null
         if (userInput != null) {
@@ -681,25 +552,15 @@ public class Main {
             }
 
             // write app data
-            writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH);
+            Util.Output.writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
             // write to assembly config
-            var newText = generateWriteOutput(partConfigLines);
-            writeToConfig(newText, ANGLE_FRAME_CONFIG_PATH);
+            var newText = Util.Output.generateWriteOutput(partConfigLines);
+            Util.Output.writeToConfig(newText, ANGLE_FRAME_CONFIG_PATH, WRITEABLE);
 
             // send rebuild command
-            rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
         }
-    }
-
-    // refactor to Util API - general use
-    private static String generateWriteOutput(String... lines) {
-        var builder = new StringBuilder();
-        for (String line : lines) {
-            builder.append(line);
-            builder.append("\n");
-        }
-        return builder.toString();
     }
 
     // refactor to Util API - general use
@@ -749,11 +610,6 @@ public class Main {
         }
     }
 
-    // refactor to Util API - general use
-    private static String getUserTextInput(ActionEvent event) {
-        return event.getActionCommand().isEmpty() ? null : event.getActionCommand();
-    }
-
     private static void handleAngleFrameBoolAction(ActionEvent event) {
         var userInput = event.getActionCommand().isEmpty() ? null : event.getActionCommand();
 
@@ -792,10 +648,10 @@ public class Main {
                 }
 
                 // write to assembly config
-                writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+                Util.Output.writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
                 // rebuild
-                rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+                Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
             }
         }
     }
@@ -859,7 +715,7 @@ public class Main {
     // This handles assembly features that are bool only input and derive X/Z location from
     // part config and app data offset table
     private static void handleBoolAction(ActionEvent event, String assemblyFeature){
-        var userInput = getUserTextInput(event);
+        var userInput = Util.UserInput.getUserTextInput(event);
         if (userInput != null) {
             var partConfigLines = FilesUtil.read(getCoverConfigPath()).split("\n");
             var assemblyConfigLines = FilesUtil.read(COVER_ASSEMBLY_CONFIG_PATH).split("\n");
@@ -1011,7 +867,7 @@ public class Main {
             }
 
             // write to assembly config
-            writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+            Util.Output.writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
             // generate app data
             // look for handle part config negation state and compare to
@@ -1114,25 +970,25 @@ public class Main {
                     }
 
                     // write app data
-                    writeToConfig(appData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-                    rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+                    Util.Output.writeToConfig(appData.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
+                    Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
                     window.dispose();
                 });
                 window.add(confirmButton);
 
                 var cancelButton = new JButton("Cancel");
                 cancelButton.addActionListener(e1 -> {
-                    writeToConfig(appData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
-                    rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+                    Util.Output.writeToConfig(appData.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
+                    Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
                     window.dispose();
                 });
                 window.add(cancelButton);
 
                 window.setVisible(true);
             } else {
-                writeToConfig(appData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+                Util.Output.writeToConfig(appData.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
-                rebuild(DaemonProgram.ASSEMBLY_GENERAL);
+                Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, REBUILDABLE);
             }
         }
     }
@@ -1199,13 +1055,13 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-        writeToConfig(builder.toString(), COVER_SHAPE_ASSEMBLY_CONFIG_PATH);
+        Util.Output.writeToConfig(builder.toString(), COVER_SHAPE_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
         // set rebuild.txt app data to cover shape assembly config path
-        writeToConfig(COVER_SHAPE_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        Util.Output.writeToConfig(COVER_SHAPE_ASSEMBLY_CONFIG_PATH.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
         // call assembly rebuild daemon
-        rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+        Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, REBUILDABLE);
     }
 
     private static JButton selectMaterialButton() {
@@ -1248,13 +1104,13 @@ public class Main {
         }
 
         // write material config to selected config.txt file
-        writeToConfig(builder.toString(), getCoverConfigPath());
+        Util.Output.writeToConfig(builder.toString(), getCoverConfigPath(), WRITEABLE);
 
         // write selected config.txt path to rebuild.txt app data
-        writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        Util.Output.writeToConfig(getCoverConfigPath().toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
         // call rebuild for AutoMaterialConfig.appref-ms
-        rebuild(DaemonProgram.MATERIAL_CONFIG);
+        Util.Build.rebuild(DaemonProgram.MATERIAL_CONFIG, REBUILDABLE);
     }
 
     private static JButton coverParamsButton(String label, ActionListener actionListener) {
@@ -1393,9 +1249,9 @@ public class Main {
                     }
                 }
             }
-            var writeOutput = generateWriteOutput(holeConfigLines);
-            writeToConfig(writeOutput, holePath);
-            rebuild(DaemonProgram.BASIC_REBUILD);
+            var writeOutput = Util.Output.generateWriteOutput(holeConfigLines);
+            Util.Output.writeToConfig(writeOutput, holePath, WRITEABLE);
+            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, REBUILDABLE);
 
             // read part config.txt for the variable name (hole number) and X/Z negative state - read only
             // only care about the current variable name (hole number) X/Z
@@ -1526,13 +1382,13 @@ public class Main {
                 window.setLocationRelativeTo(null);
                 var yesButton = new JButton("Confirm");
                 yesButton.addActionListener(e1 -> {
-                    writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+                    Util.Output.writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
                     // generate new config.txt content
 
                     // write new config
-                    writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+                    Util.Output.writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
-                    rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+                    Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, REBUILDABLE);
                     window.dispose();
                 });
                 window.add(yesButton);
@@ -1548,13 +1404,13 @@ public class Main {
                 window.add(noButton);
                 window.setVisible(true);
             } else {
-                writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+                Util.Output.writeToConfig(rebuildAppData.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
                 // generate new config.txt content
 
                 // write new config
-                writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH);
+                Util.Output.writeToConfig(builder.toString(), COVER_ASSEMBLY_CONFIG_PATH, WRITEABLE);
 
-                rebuild(DaemonProgram.ASSEMBLY_REBUILD);
+                Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, REBUILDABLE);
             }
         });
         return button;
@@ -1566,11 +1422,6 @@ public class Main {
             holeNumber = Integer.parseInt(line.split(" ")[1].trim());
         }
         return holeNumber;
-    }
-
-    private static void writeToConfig(String content, Path path) {
-        if (WRITEABLE)
-            FilesUtil.write(content, path);
     }
 
     private static Path getCoverConfigPath() {
@@ -1724,27 +1575,13 @@ public class Main {
             builder.append(line);
             builder.append("\n");
         }
-        writeToConfig(builder.toString(), coverConfigPath);
+        Util.Output.writeToConfig(builder.toString(), coverConfigPath, WRITEABLE);
 
         // write path app data to rebuild.txt
-        writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH);
+        Util.Output.writeToConfig(coverConfigPath.toString(), REBUILD_DAEMON_APP_DATA_PATH, WRITEABLE);
 
         // call auto-rebuild daemon
-        rebuild(DaemonProgram.REBUILD);
-    }
-
-    // refactor to Util API - general use
-    private static void rebuild(DaemonProgram program) {
-        if (REBUILDABLE) {
-            // write to rebuild.txt the path to the assembly config.txt file
-            try {
-                var rebuildDaemonProcess = new ProcessBuilder("cmd.exe", "/c", program.getProgram()).start();
-                rebuildDaemonProcess.waitFor();
-                rebuildDaemonProcess.destroy();
-            } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
-            }
-        }
+        Util.Build.rebuild(DaemonProgram.REBUILD, REBUILDABLE);
     }
 
 }
