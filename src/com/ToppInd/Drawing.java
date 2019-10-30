@@ -40,7 +40,7 @@ final class Drawing {
             var button = new JButton("Generate Dimensions");
             button.addActionListener(e -> ActionHandler.handleDrawingGenerateDimensionsAction(
                     Main.getCoverAssemblyPath(),
-                    Main.getCoverShapeAssemblyConfigPath(),
+                    Main.getCoverAssemblyConfigPath(),
                     Main.getCoverDrawingPath(),
                     Main.getRebuildDaemonAppDataPath()
             ));
