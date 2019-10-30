@@ -996,6 +996,8 @@ final class Cover {
             angleFramePlacementZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"Angle Frame Placement Z Offset\"="));
             window.add(angleFramePlacementZOffset);
+            window.add(Button.flipAssemblyMate("Angle Frame Placement Z Offset",
+                    Main.getCoverAssemblyConfigPath()));
 
             window.setVisible(true);
         }
