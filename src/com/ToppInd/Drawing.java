@@ -24,12 +24,9 @@ final class Drawing {
         static JButton documentPropertiesSetAsDefaultsButton() {
             var button = new JButton("Default");
             button.addActionListener(e -> ActionHandler.handleDocumentPropertyAction(
-                    "Property",
-                    "<>",
-                    "",
                     Main.getCoverDrawingConfigPath(),
-                    Main.getRebuildDaemonAppDataPath(),
-                    DaemonProgram.DRAWING_PROPERTIES));
+                    Main.getRebuildDaemonAppDataPath()
+            ));
             return button;
         }
 
@@ -45,8 +42,7 @@ final class Drawing {
                     Main.getCoverAssemblyPath(),
                     Main.getCoverShapeAssemblyConfigPath(),
                     Main.getCoverDrawingPath(),
-                    Main.getRebuildDaemonAppDataPath(),
-                    DaemonProgram.DRAWING_AUTO_DIMENSION
+                    Main.getRebuildDaemonAppDataPath()
             ));
             return button;
         }
@@ -65,13 +61,12 @@ final class Drawing {
     }
 
     static class ActionHandler {
-        static void handleDocumentPropertyAction(String lineContains, String userInput, String units,
-                                                 Path drawingConfigPath, Path appDataPath, DaemonProgram daemonProgram) {
+        static void handleDocumentPropertyAction(Path drawingConfigPath, Path appDataPath) {
             var configLines = Util.Path.getLinesFromPath(drawingConfigPath);
             var index = 0;
             for (String line : configLines) {
-                if (line.contains(lineContains)) {
-                    var newLine = Util.UserInput.getNewLineFromUserInput(line, userInput, units);
+                if (line.contains("Property")) {
+                    var newLine = Util.UserInput.getNewLineFromUserInput(line, "<>", "");
                     configLines[index] = newLine;
                 }
                 ++index;
@@ -82,12 +77,11 @@ final class Drawing {
 
             Util.Output.writeToConfig(drawingConfigPath.toString(), appDataPath, Main.getWritable());
 
-            Util.Build.rebuild(daemonProgram, Main.getBuildable());
+            Util.Build.rebuild(DaemonProgram.DRAWING_PROPERTIES, Main.getBuildable());
         }
 
-        static void handleDocumentPropertyAction(String lineContains, String units,
-                                                 ActionEvent event, JLabel label, Path drawingConfigPath,
-                                                 Path appDataPath, DaemonProgram daemonProgram) {
+        static void handleDocumentPropertyAction(ActionEvent event, JLabel label, Path drawingConfigPath,
+                                                 Path appDataPath) {
             var text = label.getText();
             var userInput = Util.UserInput.getUserTextInput(event);
 
@@ -96,10 +90,10 @@ final class Drawing {
 
                 var index = 0;
                 for (String line : configLines) {
-                    if (line.contains(lineContains)) {
+                    if (line.contains("Property")) {
                         var identifier = text.replace(":", "").trim();
                         if (line.contains(identifier)) {
-                            var newLine = Util.UserInput.getNewLineFromUserInput(line, userInput, units);
+                            var newLine = Util.UserInput.getNewLineFromUserInput(line, userInput, "");
                             configLines[index] = newLine;
                         }
                     }
@@ -112,12 +106,11 @@ final class Drawing {
                 Util.Output.writeToConfig(drawingConfigPath.toString(),
                         appDataPath, Main.getWritable());
 
-                Util.Build.rebuild(daemonProgram, Main.getBuildable());
+                Util.Build.rebuild(DaemonProgram.DRAWING_PROPERTIES, Main.getBuildable());
             }
         }
 
-        static void handleDrawingScaleViewAction(ActionEvent event, Path drawingConfigPath, Path appDataPath,
-                                                 DaemonProgram daemonProgram) {
+        static void handleDrawingScaleViewAction(ActionEvent event, Path drawingConfigPath, Path appDataPath) {
             var userInput = Util.UserInput.getUserTextInput(event);
 
             if (userInput != null) {
@@ -130,8 +123,7 @@ final class Drawing {
                 var newLines = Util.UserInput.getNewLineFromUserInput(
                         lineNumberVariableMap,
                         lines,
-                        userInput,
-                        ""
+                        userInput
                 );
 
                 var drawingViewOut = Util.Output.generateWriteOutput(newLines);
@@ -142,13 +134,12 @@ final class Drawing {
                 // write to drawing config
                 Util.Output.writeToConfig(drawingViewOut, drawingConfigPath, Main.getWritable());
 
-                Util.Build.rebuild(daemonProgram, Main.getBuildable());
+                Util.Build.rebuild(DaemonProgram.DRAWING_VIEW_SCALE, Main.getBuildable());
             }
         }
 
         static void handleDrawingGenerateDimensionsAction(Path coverAssemblyPath, Path coverAsmConfigPath,
-                                                          Path coverDrawingPath, Path appDataPath,
-                                                          DaemonProgram daemonProgram) {
+                                                          Path coverDrawingPath, Path appDataPath) {
             // for now it is just a passive activator aside from writing the appropriate paths to app data
             var appData = coverAssemblyPath + "\n";
             appData += coverAsmConfigPath + "\n";
@@ -156,7 +147,7 @@ final class Drawing {
 
             Util.Output.writeToConfig(appData, appDataPath, Main.getWritable());
 
-            Util.Build.rebuild(daemonProgram, Main.getBuildable());
+            Util.Build.rebuild(DaemonProgram.DRAWING_AUTO_DIMENSION, Main.getBuildable());
         }
     }
 
@@ -184,18 +175,16 @@ final class Drawing {
             window.setLocationRelativeTo(null);
             window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-            var propertyLabels = Util.Path.getLabelsFromLines("Property", Main.getCoverDrawingConfigPath());
+            var propertyLabels = Util.Path.getLabelsFromLines(Main.getCoverDrawingConfigPath());
             for (JLabel label : propertyLabels) {
                 window.add(label);
                 var textBox = new JTextField(10);
                 textBox.addActionListener(e -> ActionHandler.handleDocumentPropertyAction(
-                        "Property",
-                        "",
                         e,
                         label,
                         Main.getCoverDrawingConfigPath(),
-                        Main.getRebuildDaemonAppDataPath(),
-                        DaemonProgram.DRAWING_PROPERTIES));
+                        Main.getRebuildDaemonAppDataPath()
+                ));
                 window.add(textBox);
             }
 
@@ -216,8 +205,8 @@ final class Drawing {
             drawView1Box.addActionListener(e -> ActionHandler.handleDrawingScaleViewAction(
                     e,
                     Main.getCoverDrawingConfigPath(),
-                    Main.getRebuildDaemonAppDataPath(),
-                    DaemonProgram.DRAWING_VIEW_SCALE));
+                    Main.getRebuildDaemonAppDataPath()
+            ));
             window.add(drawView1Box);
 
             window.setVisible(true);

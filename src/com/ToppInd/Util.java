@@ -21,13 +21,13 @@ final class Util {
         }
 
         static String[] getNewLineFromUserInput(HashMap<Integer, String> lineNumberVariableMap,
-                                                String[] lines, String userInput, String units) {
+                                                String[] lines, String userInput) {
             var original = "";
 
             for (int lineNumber : lineNumberVariableMap.keySet()) {
                 original = lineNumberVariableMap.get(lineNumber);
             }
-            var newLine = original.split("=")[0].trim() + "= " + userInput + units;
+            var newLine = original.split("=")[0].trim() + "= " + userInput + "";
 
             for (int lineNumber : lineNumberVariableMap.keySet()) {
                 lines[lineNumber] = newLine;
@@ -92,18 +92,18 @@ final class Util {
             return FilesUtil.read(path).split("\n");
         }
 
-        static JLabel[] getLabelsFromLines(String lineContains, java.nio.file.Path path) {
+        static JLabel[] getLabelsFromLines(java.nio.file.Path path) {
             var lines = Util.Path.getLinesFromPath(path);
             var returnLabelTotal = 0;
             for (String line : lines) {
-                if (line.contains(lineContains)) {
+                if (line.contains("Property")) {
                     ++returnLabelTotal;
                 }
             }
             var labels = new JLabel[returnLabelTotal];
             var labelIndex = 0;
             for (String line : lines) {
-                if (line.contains(lineContains)) {
+                if (line.contains("Property")) {
                     var text = line.split(":")[1].split("=")[0].replace("\"", "").trim() + ": ";
                     labels[labelIndex++] = new JLabel(text);
                 }
@@ -137,6 +137,18 @@ final class Util {
             if (isWriteable)
                 FilesUtil.write(content, path);
         }
+
+        static String removeNoneASCIIChars(String string) {
+            var formattedFeature = new StringBuilder();
+
+            for (char character : string.toCharArray()){
+                if ((int) character < 250) {
+                    formattedFeature.append(character);
+                }
+            }
+
+            return formattedFeature.toString();
+        }
     }
 
     static class Build {
@@ -154,76 +166,19 @@ final class Util {
         }
     }
 
-    static class Index {
-        static int firstIndex(String line, char indexCharacter) {
-            var index = 0;
-            var charArray = line.toCharArray();
-            var stop = false;
-            while (!stop) {
-                if (charArray[index] == indexCharacter){
-                    stop = true;
-                } else {
-                    ++index;
+    static class Dimension {
+        static String getMateDistanceLine(String[] lines, String identifier) {
+            var distanceLine = "";
+            for (String line : lines) {
+                if (line.contains(identifier) && line.contains("@")) {
+                    distanceLine = line;
                 }
             }
-            return index;
-        }
-    }
 
-    static class Dimension {
-        static String getDimensionDegreeType(String line) {
-            var startIndex = 0;
-            var lineSplit = line.split("=")[0];
-            var type = "";
-            var lineContainsZero = lineSplit.contains("0");
-            if (lineSplit.contains("9")) {
-                startIndex = Index.firstIndex(line, '9');
-            } else if (lineContainsZero){
-                startIndex = Index.firstIndex(line, '0');
-            }
+            distanceLine = distanceLine.split("=")[0].split("@")[1]
+                    .replace("\"", "").trim();
 
-            var endIndex = line.contains("9") ? startIndex + 5 : startIndex + 4;
-
-            try {
-                type = line.substring(startIndex, endIndex);
-            } catch (StringIndexOutOfBoundsException exception) {
-                System.out.println(line);
-            }
-
-            return type.trim();
-        }
-
-        static boolean isDimensionX(String line) {
-            return line.contains("X");
-        }
-    }
-
-    static class Debug {
-        static void outputLines(String... lines) {
-            for (String line : lines) {
-                System.out.println(line);
-            }
-        }
-
-        static void outputLines(String line, int integer) {
-            System.out.println(line);
-            System.out.println(integer + "");
-        }
-
-        static <T> void outputLines(T line) {
-            System.out.println(line);
-        }
-
-        static void outputLines(HashMap<Integer, String> map) {
-            for (String line : map.values()) {
-                System.out.println(line);
-            }
-        }
-
-        static void outputLines(HashMap<String, Boolean> map, boolean isStringInt) {
-            for (String line : map.keySet()) {
-                System.out.println(line);
-            }
+            return distanceLine;
         }
     }
 }

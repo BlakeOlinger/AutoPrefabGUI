@@ -25,11 +25,6 @@ public class Main {
     static Path getRebuildDaemonAppDataPath() {
         return REBUILD_DAEMON_APP_DATA_PATH;
     }
-    private static final String APP_DATA_BASE = "C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\app data\\";
-    private static final Path HANDLE_OFFSET_LOOKUP_TABLE_PATH = Paths.get(APP_DATA_BASE + "assembly handle offset table.txt");
-    static Path getHandleOffsetLookupTablePath() {
-        return HANDLE_OFFSET_LOOKUP_TABLE_PATH;
-    }
     private static final Path COVER_ASSEMBLY_CONFIG_PATH = Paths.get("C:\\Users\\bolinger\\Documents\\SolidWorks Projects\\Prefab Blob - Cover Blob\\blob - L2\\blob.L2_cover.txt");
     static Path getCoverAssemblyConfigPath() {
         return COVER_ASSEMBLY_CONFIG_PATH;
@@ -57,6 +52,10 @@ public class Main {
     private static final Path COVER_DRAWING_PATH = Paths.get(PATH_BASE + "base blob - L1\\blob.cover.SLDDRW");
     static Path getCoverDrawingPath() {
         return COVER_DRAWING_PATH;
+    }
+    private static final Path HANDLE_CONFIG_PATH = Paths.get(PATH_BASE + "blob - L2\\blob.handle_1.txt");
+    static Path getHandleConfigPath() {
+        return HANDLE_CONFIG_PATH;
     }
     private static final HashMap<Integer, Path> HOLE_FEATURE_CONFIG_MAP = new HashMap<>(
             Map.of(

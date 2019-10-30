@@ -47,7 +47,7 @@ final class Cover {
             return button;
         }
 
-        static JButton inspectionPlateConfigButton(String variableName) {
+        static JButton inspectionPlateConfigButton() {
             var button = new JButton("Inspection Plate Config");
             button.addActionListener(e -> Window.displayInspectionPlateConfigWindow());
             return button;
@@ -279,8 +279,14 @@ final class Cover {
         }
 
         static JButton handleButton() {
-            var button = new JButton("Cover Assembly Handle Config");
-            button.addActionListener(e -> Window.displayAssemblyHandleConfigWindow());
+            var button = new JButton("Handle/Box Config");
+            button.addActionListener(e -> Window.displayHandleBoxConfigWindow());
+            return button;
+        }
+
+        static JButton handleConfig() {
+            var button = new JButton("Handle Config");
+            button.addActionListener(e -> Window.displayHandleConfigWindow());
             return button;
         }
 
@@ -317,6 +323,12 @@ final class Cover {
         static JButton materialConfigButton(String material) {
             var button = new JButton(material);
             button.addActionListener(e -> ActionHandler.writeMaterialConfig(material));
+            return button;
+        }
+
+        static JButton flipAssemblyMate(String mate, Path path) {
+            var button = new JButton("Mate Flip");
+            button.addActionListener(e -> ActionHandler.handleSingleMateFlip(mate, path));
             return button;
         }
     }
@@ -375,7 +387,7 @@ final class Cover {
             }
         }
 
-        static void assemblyDimensionActionHandler(ActionEvent event, String line, String units) {
+        static void assemblyDimensionActionHandler(ActionEvent event, String line) {
             // the two booleans are going to point to calls to external methods
             var userInput = Util.UserInput.getUserTextInput(event);
             if (userInput != null) {
@@ -384,7 +396,7 @@ final class Cover {
 
                 for (int lineNumber : dimensionLineNumberTable.keySet()) {
                     var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
-                            userInput, units);
+                            userInput, "in");
 
                     assemblyConfigLines[lineNumber] = newLine;
                 }
@@ -403,7 +415,7 @@ final class Cover {
             }
         }
 
-        static void assemblyDimensionActionHandler(ActionEvent event, String line, String units, Path configPath) {
+        static void assemblyDimensionActionHandler(ActionEvent event, String line, Path configPath) {
             // the two booleans are going to point to calls to external methods
             var userInput = Util.UserInput.getUserTextInput(event);
             if (userInput != null) {
@@ -412,7 +424,7 @@ final class Cover {
 
                 for (int lineNumber : dimensionLineNumberTable.keySet()) {
                     var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
-                            userInput, units);
+                            userInput, "in");
 
                     assemblyConfigLines[lineNumber] = newLine;
                 }
@@ -427,299 +439,6 @@ final class Cover {
 
                 // call rebuild daemon
                 Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
-            }
-        }
-
-        // at some point this will need to be broken up
-        static void handleBoolAction(ActionEvent event, String assemblyFeature){
-            var userInput = Util.UserInput.getUserTextInput(event);
-            if (userInput != null) {
-                var partConfigLines = FilesUtil.read(Util.Path.getCoverConfigPath()).split("\n");
-                var assemblyConfigLines = FilesUtil.read(Main.getCoverAssemblyConfigPath()).split("\n");
-
-                // populate a part config.txt line number - variable list table
-                var partConfigLineNumberVariableListTable = new HashMap<Integer, String>();
-                var index = 0;
-                for (String line : partConfigLines) {
-                    if (line.contains("Handle") && !line.contains("IIF") &&
-                            !line.contains("@")) {
-                        partConfigLineNumberVariableListTable.put(index, line);
-                    }
-                    ++index;
-                }
-
-                // populate an assembly config.txt line number - variable table list
-                var assemblyConfigLineNumberVariableListTable = new HashMap<Integer, String>();
-                index = 0;
-                for (String line : assemblyConfigLines) {
-                    if (line.contains(assemblyFeature) && !line.contains("@") &&
-                            !line.contains("IIF")) {
-                        assemblyConfigLineNumberVariableListTable.put(index, line);
-                    }
-                    ++index;
-                }
-
-
-                // makes sure part config and assembly config handle booleans match - default if user input is null
-                for (int partConfigLineNumber : partConfigLineNumberVariableListTable.keySet()) {
-                    var partConfigLine = partConfigLineNumberVariableListTable.get(partConfigLineNumber);
-
-                    if (partConfigLine.contains("Bool")) {
-                        var partIs90deg = partConfigLine.contains("9");
-                        var partTypeIndex = partConfigLine.split("=")[0].indexOf(partConfigLine.contains("9") ?
-                                '9' : '0');
-                        var partType = partConfigLine.substring(partTypeIndex, partIs90deg ? partTypeIndex + 5 :
-                                partTypeIndex + 4);
-                        var partHandleIsActive = partConfigLines[partConfigLineNumber].split("=")[1]
-                                .contains("1");
-
-                        for (int assemblyConfigLineNumber : assemblyConfigLineNumberVariableListTable.keySet()) {
-                            var assemblyConfigLine = assemblyConfigLineNumberVariableListTable
-                                    .get(assemblyConfigLineNumber);
-
-                            if (assemblyConfigLine.contains("Bool")) {
-                                var assemblyType = Util.Dimension.getDimensionDegreeType(assemblyConfigLine);
-                                var partAssemblyTypeIsSame = assemblyType.compareTo(partType) == 0;
-                                if (partAssemblyTypeIsSame) {
-                                    var assemblyHandleIsActive = assemblyConfigLines[assemblyConfigLineNumber]
-                                            .split("=")[1].contains("1");
-
-                                    // check if handle booleans match
-                                    var partAssemblyBoolMismatch = !(partHandleIsActive && assemblyHandleIsActive ||
-                                            !assemblyHandleIsActive && !partHandleIsActive);
-
-                                    // if mismatched set assembly config line to match part config line
-                                    if (partAssemblyBoolMismatch) {
-                                        var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLine,
-                                                userInput, "");
-
-                                        assemblyConfigLines[assemblyConfigLineNumber] = newLine;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // make sure X/Z offsets between part/assembly config match
-                // populate part config handle offsets
-                var partHandleVariableBuilder = new StringBuilder();
-                for (String line : partConfigLines) {
-                    if (line.contains("Handle") && line.contains("Offset") &&
-                            !line.contains("@")) {
-                        partHandleVariableBuilder.append(line);
-                        partHandleVariableBuilder.append("!");
-                    }
-                }
-                var partHandleVariableArray = partHandleVariableBuilder.toString().split("!");
-
-                // populate assembly config handle offsets
-                var assemblyLineNumberOffsetTable = new HashMap<Integer, String>();
-                index = 0;
-                for (String line : assemblyConfigLines) {
-                    if (line.contains(assemblyFeature) && line.contains("Offset") &&
-                            !line.contains("IIF") && !line.contains("@")) {
-                        assemblyLineNumberOffsetTable.put(index, line);
-                    }
-                    ++index;
-                }
-
-                // populate relevant offset table list
-                var offsetTableStringList = new StringBuilder();
-                var offsetTableLines = FilesUtil.read(Main.getHandleOffsetLookupTablePath()).split("\n");
-                for (String line : offsetTableLines) {
-                    if (line.contains(assemblyFeature)) {
-                        offsetTableStringList.append(line);
-                        offsetTableStringList.append("!");
-                    }
-                }
-                var offsetTableArray = offsetTableStringList.toString().split("!");
-
-                // compare offsets and generate corresponding assembly config lines
-                for (int lineNumber : assemblyLineNumberOffsetTable.keySet()) {
-                    var assemblyLine = assemblyConfigLines[lineNumber];
-                    var assemblyType = Util.Dimension.getDimensionDegreeType(assemblyLine);
-                    var assemblyIsX = Util.Dimension.isDimensionX(assemblyLine);
-
-                    for (String partLine : partHandleVariableArray) {
-
-                        var partType = Util.Dimension.getDimensionDegreeType(partLine);
-                        var partIsX = Util.Dimension.isDimensionX(partLine);
-                        var assemblyPartTypeIsSame = assemblyType.compareTo(partType) == 0;
-
-                        if (assemblyPartTypeIsSame &&
-                                (assemblyIsX && partIsX || !assemblyIsX && !partIsX)) {
-
-                            for (String offset : offsetTableArray) {
-                                var offsetIsX = Util.Dimension.isDimensionX(offset);
-                                var offsetType = Util.Dimension.getDimensionDegreeType(offset);
-
-                                if ((offsetIsX && assemblyIsX || !offsetIsX && !assemblyIsX) &&
-                                        offsetType.compareTo(partType) == 0) {
-                                    var partValue = Double.parseDouble(partLine.split("=")[1]
-                                            .replace("in", "").trim());
-                                    var offsetValueAsInt = Double.parseDouble(offset.split("=")[1].trim());
-                                    partValue -= offsetValueAsInt;
-                                    var newLine = assemblyLine.split("=")[0].trim() + "= " + partValue + "in";
-
-                                    assemblyConfigLines[lineNumber] = newLine;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // if user input is not null - check if input is "0" or "1"
-                // if "0" set all assembly config lines handle bool to zero
-                // if "1" do nothing
-                if (userInput.contains("0")) {
-                    // set all GT Box Bool to 0
-                    for (int assemblyConfigLineNumber : assemblyConfigLineNumberVariableListTable.keySet()) {
-                        var assemblyConfigLine = assemblyConfigLineNumberVariableListTable.get(assemblyConfigLineNumber);
-                        if (assemblyConfigLine.contains("Bool")) {
-                            var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLine, userInput, "");
-                            assemblyConfigLines[assemblyConfigLineNumber] = newLine;
-                        }
-                    }
-                }
-
-                // generate assembly config output
-                var builder = new StringBuilder();
-                for (String line : assemblyConfigLines) {
-                    builder.append(line);
-                    builder.append("\n");
-                }
-
-                // write to assembly config
-                Util.Output.writeToConfig(builder.toString(), Main.getCoverAssemblyConfigPath(),
-                        Main.getWritable());
-
-                // generate app data
-                // look for handle part config negation state and compare to
-                // assembly handle negation state - if diff write handle offset
-                // Distance<#> to app data - USER CONFIRM - if app data contains flip request
-
-                // generate part config line number negation table
-                var partConfigLineNumberNegationTable = new HashMap<Integer, String>();
-                index = 0;
-                for (String line : partConfigLines) {
-                    if (line.contains("Negative") && line.contains("Handle")) {
-                        partConfigLineNumberNegationTable.put(index, line);
-                    }
-                    ++index;
-                }
-
-                // generate assembly config line number negation table
-                var assemblyConfigLineNumberNegationTable = new HashMap<Integer, String>();
-                index = 0;
-                for (String line : assemblyConfigLines) {
-                    if (line.contains("Negative") && line.contains(assemblyFeature)) {
-                        assemblyConfigLineNumberNegationTable.put(index, line);
-                    }
-                    ++index;
-                }
-
-                // compare negation states and populate app data with appropriate
-                // Distance<#> on dif
-                // populate assembly config negation line string list for mates to flip
-                var assemblyConfigNegationLineToFlipStringList = new StringBuilder();
-                for (int partConfigLineNumber : partConfigLineNumberNegationTable.keySet()) {
-                    var partConfigLine = partConfigLineNumberNegationTable.get(partConfigLineNumber);
-                    var partLineIsX = Util.Dimension.isDimensionX(partConfigLine);
-                    var partLineType = Util.Dimension.getDimensionDegreeType(partConfigLine);
-
-                    for (int assemblyLineNumber : assemblyConfigLineNumberNegationTable.keySet()) {
-                        var assemblyConfigLine = assemblyConfigLineNumberNegationTable.get(assemblyLineNumber);
-                        var assemblyLineIsX = Util.Dimension.isDimensionX(assemblyConfigLine);
-                        var assemblyLineType = Util.Dimension.getDimensionDegreeType(assemblyConfigLine);
-
-                        // for matching X/Z and matching part type (0deg or 90deg)
-                        if (partLineIsX && assemblyLineIsX ||
-                                !partLineIsX && !assemblyLineIsX) {
-                            if (assemblyLineType.compareTo(partLineType) == 0) {
-                                var partLineIsNegative = partConfigLine.split("=")[1].contains("1");
-                                var assemblyLineIsNegative = assemblyConfigLine.split("=")[1].contains("1");
-                                var negationIsDif = !(partLineIsNegative && assemblyLineIsNegative ||
-                                        !partLineIsNegative && !assemblyLineIsNegative);
-                                if (negationIsDif) {
-                                    assemblyConfigNegationLineToFlipStringList.append(assemblyConfigLine);
-                                    assemblyConfigNegationLineToFlipStringList.append("!");
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // generate app data initial line
-                var appData = new StringBuilder();
-                appData.append(Main.getCoverAssemblyConfigPath());
-                appData.append("\n");
-
-                // generate and write app data
-                // if mates will be flipped confirm changes okay first
-                if (assemblyConfigNegationLineToFlipStringList.length() > 0) {
-                    var assemblyConfigNegationFlipArray = assemblyConfigNegationLineToFlipStringList.toString()
-                            .split("!");
-
-                    // first ask for user confirmation and display the list of variables that will be flipped
-                    var window = new JFrame("Confirm");
-                    window.setSize(225, 300);
-                    window.setLayout(new FlowLayout());
-                    window.setLocationRelativeTo(null);
-                    window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-                    var label = new JLabel("The Following Mates Will Be Flipped:");
-                    window.add(label);
-                    var labels = new JLabel[assemblyConfigNegationFlipArray.length];
-
-                    var labelIndex = 0;
-                    for (String dimension : assemblyConfigNegationFlipArray) {
-                        labels[labelIndex] = new JLabel(dimension);
-                        window.add(labels[labelIndex++]);
-                    }
-
-                    // get user confirm/cancel
-                    var confirmButton = new JButton("Confirm");
-                    confirmButton.addActionListener(e1 -> {
-                        // generate dimensions to add to app data
-                        for (String dimension : assemblyConfigNegationFlipArray) {
-                            for (String line : assemblyConfigLines) {
-                                var assemblyVariable = dimension.split("=")[0].split("Negative")[0]
-                                        .replace("\"", "").trim();
-                                if (line.contains(assemblyVariable) &&
-                                        line.contains("@")) {
-                                    var distance = line.split("=")[0].split("@")[1]
-                                            .replace("\"", "").trim();
-                                    appData.append(distance);
-                                    appData.append("\n");
-                                }
-                            }
-                        }
-
-                        // write app data
-                        Util.Output.writeToConfig(appData.toString(), Main.getRebuildDaemonAppDataPath(),
-                                Main.getWritable());
-                        Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
-                        window.dispose();
-                    });
-                    window.add(confirmButton);
-
-                    var cancelButton = new JButton("Cancel");
-                    cancelButton.addActionListener(e1 -> {
-                        Util.Output.writeToConfig(appData.toString(), Main.getRebuildDaemonAppDataPath(),
-                                Main.getWritable());
-                        Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
-                        window.dispose();
-                    });
-                    window.add(cancelButton);
-
-                    window.setVisible(true);
-                } else {
-                    Util.Output.writeToConfig(appData.toString(), Main.getRebuildDaemonAppDataPath(),
-                            Main.getWritable());
-
-                    Util.Build.rebuild(DaemonProgram.ASSEMBLY_GENERAL, Main.getBuildable());
-                }
             }
         }
 
@@ -831,7 +550,7 @@ final class Cover {
             Util.Build.rebuild(DaemonProgram.MATERIAL_CONFIG, Main.getBuildable());
         }
 
-        private static void writeBaseCoverChanges(String variableName) {
+        static void writeBaseCoverChanges(String variableName) {
             var coverConfigPath = Main.getCoverShapeSelection().contains("Square") ?
                     Main.getSquareCoverConfigPath() : Main.getCoverConfigPath();
             var coverConfigContentLines = FilesUtil.read(coverConfigPath).split("\n");
@@ -948,6 +667,38 @@ final class Cover {
             // call auto-rebuild daemon
             Util.Build.rebuild(DaemonProgram.REBUILD, Main.getBuildable());
         }
+
+        static void handleSingleMateFlip(String mate, Path path) {
+            var configLines = Util.Path.getLinesFromPath(path);
+            var distanceLine = Util.Dimension.getMateDistanceLine(configLines, mate);
+
+            var appData = path + "\n" + distanceLine;
+
+            Util.Output.writeToConfig(appData, Main.getRebuildDaemonAppDataPath(),
+                    Main.getWritable());
+
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, Main.getBuildable());
+        }
+
+        static void handleRadioGroup(ButtonGroup buttonGroup) {
+            var configLines = Util.Path.getLinesFromPath(Main.getHandleConfigPath());
+            var userSelection = buttonGroup.getSelection().getActionCommand();
+
+            for (var i = 0; i < configLines.length; ++i) {
+                var line = configLines[i];
+                if (line.contains(userSelection) && !line.contains("IIF")) {
+                    configLines[i] = Util.UserInput.getNewLineFromUserInput(line, "1", "");
+                } else if (!line.contains(userSelection) && !line.contains("IIF")){
+                    configLines[i] = Util.UserInput.getNewLineFromUserInput(line, "0", "");
+                }
+            }
+
+            var newLines = Util.Output.generateWriteOutput(configLines);
+
+            Util.Output.writeToConfig(newLines, Main.getHandleConfigPath(), Main.getWritable());
+
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, Main.getBuildable());
+        }
     }
 
     static class Window {
@@ -981,15 +732,13 @@ final class Cover {
             // if square write to assembly config "Square Center Mark"= 1 else = 0
             Assembly.setAssemblySquareCenterMark(
                     Main.getCoverAssemblyConfigPath(),
-                    "Square Center Mark",
-                    Main.getRebuildDaemonAppDataPath(),
-                    DaemonProgram.BASIC_REBUILD);
+                    Main.getRebuildDaemonAppDataPath()
+            );
 
             // set cover selection assembly config
             Assembly.setCoverSelectionAssemblyConfig(
                     Main.getCoverShapeAssemblyConfigPath(),
-                    Main.getRebuildDaemonAppDataPath(),
-                    DaemonProgram.ASSEMBLY_REBUILD
+                    Main.getRebuildDaemonAppDataPath()
             );
 
             // read cover config contents and set cover config variable table
@@ -1057,7 +806,7 @@ final class Cover {
             window.setLayout(new FlowLayout());
             window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-            var radioButtons = Assembly.holeAssemblyConfigRadios(variableName);
+            var radioButtons = Assembly.getRadioButtons(variableName);
             var buttonGroup = new ButtonGroup();
 
             for (JRadioButton radioButton : radioButtons) {
@@ -1068,7 +817,7 @@ final class Cover {
                 window.add(radioButton);
             }
 
-            window.add(Button.inspectionPlateConfigButton(variableName));
+            window.add(Button.inspectionPlateConfigButton());
 
             window.add(Button.confirmHoleAssemblyConfigButton(variableName, buttonGroup));
 
@@ -1110,52 +859,100 @@ final class Cover {
             window.setVisible(true);
         }
 
-        static void displayAssemblyHandleConfigWindow() {
+        static void displayHandleBoxConfigWindow() {
             var window = new JFrame("Cover Assembly Handle Configurer");
             window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             window.setSize(275, 250);
             window.setLocationRelativeTo(null);
             window.setLayout(new FlowLayout());
 
-            // disable config assembly handle if no part config.txt handle is active
-            var coverHasHandle = false;
-            var partConfigLines = FilesUtil.read(Util.Path.getCoverConfigPath()).split("\n");
-            for (String line : partConfigLines) {
-                if (line.contains("Handle") && line.contains("Bool") &&
-                        !line.contains("IIF")) {
-                    if (!coverHasHandle) {
-                        coverHasHandle = line.split("=")[1].contains("1");
-                    }
-                }
+            window.add(new JLabel("GT Box 0deg Bool: "));
+            var textBox = new JTextField(1);
+            textBox.addActionListener(e -> ActionHandler.assemblyBoolActionHandler(e,
+                    "\"GT Box 0deg Bool\"=",
+                    Main.getCoverAssemblyConfigPath()));
+            window.add(textBox);
+
+            window.add(new JLabel("GT Box 0deg X Offset: "));
+            var textBox0degXOffset = new JTextField(2);
+            textBox0degXOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"GT Box 0deg X Offset\"="));
+            window.add(textBox0degXOffset);
+            window.add(Button.flipAssemblyMate("GT Box 0deg X Offset",
+                    Main.getCoverAssemblyConfigPath()));
+
+            window.add(new JLabel("GT Box 0deg Z Offset: "));
+            var textBox0degZOffset = new JTextField(2);
+            textBox0degZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"GT Box 0deg Z Offset\"="));
+            window.add(textBox0degZOffset);
+            window.add(Button.flipAssemblyMate("GT Box 0deg Z Offset",
+                    Main.getCoverAssemblyConfigPath()));
+
+            var GTBox90degLabel = new JLabel("GT Box 90deg Bool: ");
+            window.add(GTBox90degLabel);
+            var GTBox90degBox = new JTextField(1);
+            GTBox90degBox.addActionListener(e -> ActionHandler.assemblyBoolActionHandler(e,
+                    "\"GT Box 90deg Bool\"=",
+                    Main.getCoverAssemblyConfigPath()));
+            window.add(GTBox90degBox);
+
+            window.add(new JLabel("GT Box 90deg X Offset: "));
+            var textBox90degXOffset = new JTextField(2);
+            textBox90degXOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"GT Box 90deg X Offset\"="));
+            window.add(textBox90degXOffset);
+            window.add(Button.flipAssemblyMate("GT Box 90deg X Offset",
+                    Main.getCoverAssemblyConfigPath()));
+
+            window.add(new JLabel("GT Box 90deg Z Offset: "));
+            var textBox90degZOffset = new JTextField(2);
+            textBox90degZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"GT Box 90deg Z Offset\"="));
+            window.add(textBox90degZOffset);
+            window.add(Button.flipAssemblyMate("GT Box 90deg Z Offset",
+                    Main.getCoverAssemblyConfigPath()));
+
+            window.add(Button.handleConfig());
+
+            window.setVisible(true);
+        }
+
+        static void displayHandleConfigWindow() {
+            var window = new JFrame("Handle Config");
+            window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            window.setSize(300, 300);
+            window.setLocationRelativeTo(null);
+            window.setLayout(new FlowLayout());
+
+            // generate radio buttons using hole radio button generator for handle config
+            var radioButtons = Assembly.getRadioButtons(Main.getHandleConfigPath());
+            var buttonGroup = new ButtonGroup();
+
+            for (JRadioButton radioButton : radioButtons) {
+                buttonGroup.add(radioButton);
             }
 
-            var handleGTBoxLabel = coverHasHandle ? "GT Box 0deg Bool: " : "No Active Handle Found ";
-            var label = new JLabel(handleGTBoxLabel);
-            window.add(label);
-
-            if (coverHasHandle) {
-                var textBox = new JTextField(1);
-                textBox.addActionListener(e -> ActionHandler.handleBoolAction(e, "GT Box 0deg"));
-                window.add(textBox);
-
-                var GTBox90degLabel = new JLabel("GT Box 90deg Bool: ");
-                window.add(GTBox90degLabel);
-                var GTBox90degBox = new JTextField(1);
-                GTBox90degBox.addActionListener(e -> ActionHandler.handleBoolAction(e, "GT Box 90deg"));
-                window.add(GTBox90degBox);
-
-                var handleBoolLabel = new JLabel("Handle 0deg Bool: ");
-                window.add(handleBoolLabel);
-                var handleBoolTextBox = new JTextField(1);
-                handleBoolTextBox.addActionListener(e -> ActionHandler.handleBoolAction(e, "Handle 0deg"));
-                window.add(handleBoolTextBox);
-
-                var handle90degBoolLabel = new JLabel("Handle 90deg Bool: ");
-                window.add(handle90degBoolLabel);
-                var handle90debBox = new JTextField(1);
-                handle90debBox.addActionListener(e -> ActionHandler.handleBoolAction(e, "Handle 90deg"));
-                window.add(handle90debBox);
+            for (JRadioButton radioButton : radioButtons) {
+                radioButton.addActionListener(e -> ActionHandler.handleRadioGroup(buttonGroup));
+                window.add(radioButton);
             }
+
+            window.add(new JLabel("Handle X Offset: "));
+            var textBox0degXOffset = new JTextField(2);
+            textBox0degXOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Cover Hatch Handle X Offset\"="));
+            window.add(textBox0degXOffset);
+            window.add(Button.flipAssemblyMate("Cover Hatch Handle X Offset",
+                    Main.getCoverAssemblyConfigPath()));
+
+            window.add(new JLabel("Handle Z Offset: "));
+            var textBox0degZOffset = new JTextField(2);
+            textBox0degZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
+                    "\"Cover Hatch Handle Z Offset\"="));
+            window.add(textBox0degZOffset);
+            window.add(Button.flipAssemblyMate("Cover Hatch Handle Z Offset",
+                    Main.getCoverAssemblyConfigPath()));
 
             window.setVisible(true);
         }
@@ -1191,13 +988,13 @@ final class Cover {
             window.add(new JLabel("Angle Frame ID Cutaway Diameter: "));
             var cutawayDiameterInputBox = new JTextField(2);
             cutawayDiameterInputBox.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Angle Frame ID Cutaway Diameter\"=", "in"));
+                    "\"Angle Frame ID Cutaway Diameter\"="));
             window.add(cutawayDiameterInputBox);
 
             window.add(new JLabel("Angle Frame Placement Z Offset: "));
             var angleFramePlacementZOffset = new JTextField(2);
             angleFramePlacementZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Angle Frame Placement Z Offset\"=", "in"));
+                    "\"Angle Frame Placement Z Offset\"="));
             window.add(angleFramePlacementZOffset);
 
             window.setVisible(true);
@@ -1225,19 +1022,19 @@ final class Cover {
             window.add(new JLabel("Alum Flat Bar X Length: "));
             var alumFlatLengthX = new JTextField(2);
             alumFlatLengthX.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Length X\"=", "in", Main.getAlumFlatBarConfigPath()));
+                    "\"Length X\"=", Main.getAlumFlatBarConfigPath()));
             window.add(alumFlatLengthX);
 
             window.add(new JLabel("Alum Flat Bar Z Length: "));
             var alumFlatLengthZ = new JTextField(2);
             alumFlatLengthZ.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Length Z\"=", "in", Main.getAlumFlatBarConfigPath()));
+                    "\"Length Z\"=", Main.getAlumFlatBarConfigPath()));
             window.add(alumFlatLengthZ);
 
             window.add(new JLabel("Alum Flat Bar Placement Z Offset: "));
             var alumFlatBarPlacementZOffset = new JTextField(2);
             alumFlatBarPlacementZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Aluminum Flat Bar 90deg Placement Z Offset\"=", "in",
+                    "\"Aluminum Flat Bar 90deg Placement Z Offset\"=",
                     Main.getCoverAssemblyConfigPath()));
             window.add(alumFlatBarPlacementZOffset);
 
@@ -1260,7 +1057,7 @@ final class Cover {
             window.add(new JLabel("Lock Plate Z Offset: "));
             var offsetBox = new JTextField(2);
             offsetBox.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Hatch Lock Plate Z Offset\"=", "in"));
+                    "\"Hatch Lock Plate Z Offset\"="));
             window.add(offsetBox);
 
             window.setVisible(true);
@@ -1282,19 +1079,19 @@ final class Cover {
             window.add(new JLabel("Bolt-In Hinges Z Offset: "));
             var zOffset = new JTextField(2);
             zOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Bolt-In Hinge Z Offset\"=", "in"));
+                    "\"Bolt-In Hinge Z Offset\"="));
             window.add(zOffset);
 
             window.add(new JLabel("Bolt-In Hinge 1 X Offset: "));
             var xOneOffset = new JTextField(2);
             xOneOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Bolt-In Hinge 1 X Offset\"=", "in"));
+                    "\"Bolt-In Hinge 1 X Offset\"="));
             window.add(xOneOffset);
 
             window.add(new JLabel("Bolt-In Hinge 2 X Offset: "));
             var xTwoOffset = new JTextField(2);
             xTwoOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Bolt-In Hinge 2 X Offset\"=", "in"));
+                    "\"Bolt-In Hinge 2 X Offset\"="));
             window.add(xTwoOffset);
 
             window.setVisible(true);
@@ -1315,13 +1112,13 @@ final class Cover {
             window.add(new JLabel("Hatch Arm X Offset: "));
             var xOffset = new JTextField(2);
             xOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Arm X Offset\"=", "in"));
+                    "\"Arm X Offset\"="));
             window.add(xOffset);
 
             window.add(new JLabel("Hatch Arm Z Offset: "));
             var zOffset = new JTextField(2);
             zOffset.addActionListener(e -> Cover.ActionHandler.assemblyDimensionActionHandler(e,
-                    "\"Arm Z Offset\"=", "in"));
+                    "\"Arm Z Offset\"="));
             window.add(zOffset);
 
             window.setVisible(true);
@@ -1343,16 +1140,14 @@ final class Cover {
 
     static class Assembly {
         static void setAssemblySquareCenterMark(Path assemblyConfigPath,
-                                                String identifier,
-                                                Path appDataPath,
-                                                DaemonProgram daemonProgram) {
+                                                Path appDataPath) {
             var configLines = Util.Path.getLinesFromPath(assemblyConfigPath);
             var index = 0;
             var writeNeeded = false;
 
             // set config line square center mark based on current setting and user shape selection
             for (String line : configLines) {
-                if (line.contains(identifier) && !line.contains("IIF")) {
+                if (line.contains("Square Center Mark") && !line.contains("IIF")) {
                     var currentStateIsOne = line.contains("1");
                     var selectionIsSquare = Main.getCoverShapeSelection().contains("Square");
                     var newLine = "";
@@ -1378,13 +1173,12 @@ final class Cover {
                         appDataPath,
                         Main.getWritable());
 
-                Util.Build.rebuild(daemonProgram, Main.getBuildable());
+                Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, Main.getBuildable());
             }
         }
 
         static void setCoverSelectionAssemblyConfig(Path coverShapeConfigPath,
-                                                    Path appDataPath,
-                                                    DaemonProgram daemonProgram) {
+                                                    Path appDataPath) {
             // get config lines
             var configLines = FilesUtil.read(coverShapeConfigPath).split("\n");
 
@@ -1410,10 +1204,10 @@ final class Cover {
                     Main.getWritable());
 
             // call assembly rebuild daemon
-            Util.Build.rebuild(daemonProgram, Main.getBuildable());
+            Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, Main.getBuildable());
         }
 
-        static JRadioButton[] holeAssemblyConfigRadios(String variableName) {
+        static JRadioButton[] getRadioButtons(String variableName) {
             var featureStringList = new StringBuilder();
             featureStringList.append("none");
             featureStringList.append("!");
@@ -1421,7 +1215,21 @@ final class Cover {
 
             var assemblyConfigLines = FilesUtil.read(holePath).split("\n");
 
-            for (String line : assemblyConfigLines) {
+            return getJRadioButtons(featureStringList, assemblyConfigLines);
+        }
+
+        static JRadioButton[] getRadioButtons(Path path) {
+            var featureStringList = new StringBuilder();
+            featureStringList.append("none");
+            featureStringList.append("!");
+
+            var configLines = Util.Path.getLinesFromPath(path);
+
+            return getJRadioButtons(featureStringList, configLines);
+        }
+
+        private static JRadioButton[] getJRadioButtons(StringBuilder featureStringList, String[] configLines) {
+            for (String line : configLines) {
                 if (line.contains("Bool") && !line.contains("IIF")) {
                     var feature = line.split("=")[0].replace("Bool", "")
                             .replace("\"", "");
@@ -1435,8 +1243,10 @@ final class Cover {
             var radioButtonArray = new JRadioButton[featureArray.length];
             var index = 0;
             for (String feature : featureArray) {
-                radioButtonArray[index] = new JRadioButton(feature);
-                radioButtonArray[index].setActionCommand(feature);
+                var formattedFeature = Util.Output.removeNoneASCIIChars(feature);
+
+                radioButtonArray[index] = new JRadioButton(formattedFeature);
+                radioButtonArray[index].setActionCommand(formattedFeature);
                 ++index;
             }
 

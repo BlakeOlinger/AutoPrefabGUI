@@ -43,7 +43,7 @@ class UtilTest {
                 "\"cow\"= foo"
         };
         Util.Map.setVariableLineNumberMap(LINES, LINE_NUMBER_VARIABLE_MAP, "\"cow\"=");
-        var result = Util.UserInput.getNewLineFromUserInput(LINE_NUMBER_VARIABLE_MAP, LINES, "foo", "");
+        var result = Util.UserInput.getNewLineFromUserInput(LINE_NUMBER_VARIABLE_MAP, LINES, "foo");
 
         assertArrayEquals(expected, result);
     }
