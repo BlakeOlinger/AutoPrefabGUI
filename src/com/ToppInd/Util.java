@@ -41,7 +41,7 @@ final class Util {
         }
     }
 
-    static class SetMap {
+    static class Map {
         static void setVariableLineNumberMap(java.nio.file.Path path,
                                              HashMap<String, Integer> variableLineNumberMap) {
             var configLines = Path.getLinesFromPath(path);
@@ -69,6 +69,21 @@ final class Util {
                 }
                 ++lineIndex;
             }
+        }
+
+        static HashMap<Integer, String> getSingleLineNumberTable(String[] lines, String identifier) {
+            var map = new HashMap<Integer, String>();
+            var index = 0;
+
+            for (String line : lines) {
+                if (line.contains(identifier) && !line.contains("IIF")) {
+                    map.put(index, line);
+                    break;
+                }
+                ++index;
+            }
+
+            return map;
         }
     }
 
@@ -101,6 +116,11 @@ final class Util {
                     Main.getSquareCoverConfigPath() :
                     Main.getCoverConfigPath();
         }
+
+        static java.nio.file.Path getHolePath(String hole) {
+            var holeNumber = Integer.parseInt(hole.split(" ")[1].trim());
+            return Main.getHoleFeatureConfigMap().get(holeNumber);
+        }
     }
 
     static class Output {
@@ -131,6 +151,50 @@ final class Util {
                     e.printStackTrace();
                 }
             }
+        }
+    }
+
+    static class Index {
+        static int firstIndex(String line, char indexCharacter) {
+            var index = 0;
+            var charArray = line.toCharArray();
+            var stop = false;
+            while (!stop) {
+                if (charArray[index] == indexCharacter){
+                    stop = true;
+                } else {
+                    ++index;
+                }
+            }
+            return index;
+        }
+    }
+
+    static class Dimension {
+        static String getDimensionDegreeType(String line) {
+            var startIndex = 0;
+            var lineSplit = line.split("=")[0];
+            var type = "";
+            var lineContainsZero = lineSplit.contains("0");
+            if (lineSplit.contains("9")) {
+                startIndex = Index.firstIndex(line, '9');
+            } else if (lineContainsZero){
+                startIndex = Index.firstIndex(line, '0');
+            }
+
+            var endIndex = line.contains("9") ? startIndex + 5 : startIndex + 4;
+
+            try {
+                type = line.substring(startIndex, endIndex);
+            } catch (StringIndexOutOfBoundsException exception) {
+                System.out.println(line);
+            }
+
+            return type.trim();
+        }
+
+        static boolean isDimensionX(String line) {
+            return line.contains("X");
         }
     }
 }

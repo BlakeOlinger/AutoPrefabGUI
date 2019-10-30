@@ -123,7 +123,7 @@ final class Drawing {
             if (userInput != null) {
                 var lines = Util.Path.getLinesFromPath(drawingConfigPath);
                 var lineNumberVariableMap = new HashMap<Integer, String>();
-                Util.SetMap.setVariableLineNumberMap(
+                Util.Map.setVariableLineNumberMap(
                         lines,
                         lineNumberVariableMap,
                         "\"Drawing View1 Scale\"= ");
