@@ -98,11 +98,11 @@ public class Main {
     static HashMap<String, String> getMaterialConfigTable() {
         return MATERIAL_CONFIG_TABLE;
     }
-    private static final boolean REBUILDABLE = true;
+    private static final boolean REBUILDABLE = false;
     static boolean getBuildable() {
         return REBUILDABLE;
     }
-    private static final boolean WRITEABLE = true;
+    private static final boolean WRITEABLE = false;
     static boolean getWritable() {
         return WRITEABLE;
     }

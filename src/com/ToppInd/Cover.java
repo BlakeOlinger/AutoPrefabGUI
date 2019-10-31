@@ -567,22 +567,22 @@ final class Cover {
 
             var newLines = Util.UserInput.getNewLinesFromUserInput(materialLineNumberMap, configLines, materialCode);
 
-            var writeOutput = Util.Output.generateWriteOutput(newLines);
-
-            // write material config to selected config.txt file
-            Util.Output.writeToConfig(writeOutput, Util.Path.getCoverShapeConfigPath(),
-                    Main.getWritable());
-
             // call aluminum handle macro - tell macro if material is aluminum - material code "1"
             var isAluminum = materialCode.contains("1");
-            SLDPRT.writeHandleOrientationBool(isAluminum);
+            SLDPRT.writeHandleOrientationBool(isAluminum, configLines);
 
             // if alum - call handle hole offset macro - non-aluminum don't have holes
             if (isAluminum) {
                 // read from cover offset config and set X/Z offsets for 90/0deg
                 var handleIs90deg = Util.Configuration.hatchIs90deg();
-                SLDPRT.writeHandleOffsets(handleIs90deg, true);
+                SLDPRT.writeHandleOffsets(handleIs90deg, configLines);
             }
+
+            var writeOutput = Util.Output.generateWriteOutput(newLines);
+
+            // write material config to selected config.txt file
+            Util.Output.writeToConfig(writeOutput, Util.Path.getCoverShapeConfigPath(),
+                    Main.getWritable());
 
             // write selected config.txt path to rebuild.txt app data
             Util.Output.writeToConfig(Util.Path.getCoverShapeConfigPath().toString(),
@@ -601,7 +601,7 @@ final class Cover {
             // MACRO - if material is aluminum call offset placement -
             if (Util.Configuration.isAluminum()) {
                 var is90deg = Util.Configuration.hatchIs90deg();
-                SLDPRT.writeHandleOffsets(is90deg, false);
+                SLDPRT.writeHandleOffsets(is90deg, coverConfigContentLines);
             }
 
             // gets cover variables - user input and appends the line with the changed value to the lines array
@@ -1359,14 +1359,10 @@ final class Cover {
                     userSelection.contains("none"));
         }
 
-        static void writeHandleOrientationBool(boolean isAluminum) {
-            // get path for selected cover shape
-            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
-            var coverConfigLines = Util.Path.getLinesFromPath(coverConfigPath);
-
+        static void writeHandleOrientationBool(boolean isAluminum, String[] configLines) {
             // get bool line map from cover part config for hatch handle
             var handleBoolLineNumberMap = Util.Map.getLineNumberTable(
-                    coverConfigLines,
+                    configLines,
                     new HashMap<>(),
                     0,
                     "Handle", "Bool"
@@ -1402,28 +1398,17 @@ final class Cover {
                 handleBoolLineNumberMap.put(lineNumber, newLine);
             }
 
-            var boolConfigLines = Util.Output.getLinesMapSwap(handleBoolLineNumberMap, coverConfigLines);
-
-            var writeOutput = Util.Output.generateWriteOutput(boolConfigLines);
-
-            Util.Output.writeToConfig(writeOutput, coverConfigPath, Main.getWritable());
-
-            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, Main.getBuildable());
+            Util.Output.getLinesMapSwap(handleBoolLineNumberMap, configLines);
         }
-// FIXME - modify all write/build steps to happen at the end of a sequence
-//  - have output lines then compile into one output rather than calling a bunch of writes and rebuilds
-        // only works with 90deg handles for now
-        static void writeHandleOffsets(boolean is90deg, boolean asyncBuild) {
-            // reads from cover offset and sets 90/0deg handle offsets for cover part config
 
-            // get path for selected cover shape
-            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
-            var coverConfigLines = Util.Path.getLinesFromPath(coverConfigPath);
+        // only works with 90deg handles for now
+        static void writeHandleOffsets(boolean is90deg, String[] configLines) {
+            // reads from cover offset and sets 90/0deg handle offsets for cover part config
 
             // get line number map for handle offsets
             var degree = is90deg ? "90deg" : "0deg";
             var configHandleOffsetsLineNumberMap = Util.Map.getLineNumberTable(
-                    coverConfigLines,
+                    configLines,
                     new HashMap<>(),
                     0,
                     "Handle", degree, "Offset"
@@ -1431,9 +1416,9 @@ final class Cover {
 
             // current offset target - Z: 4" up from lower hatch edge - X: 7" inset from outer hatch edge
             var identifier = "\"Cover Hatch Door Length\"=";
-            var configDoorXLength = Util.Dimension.getValue(coverConfigLines, identifier);
+            var configDoorXLength = Util.Dimension.getValue(configLines, identifier);
             identifier = "\"Cover Hatch Door Width\"=";
-            var configDoorZLength = Util.Dimension.getValue(coverConfigLines, identifier);
+            var configDoorZLength = Util.Dimension.getValue(configLines, identifier);
 
             var handleLength = 4.25;
 
@@ -1455,14 +1440,8 @@ final class Cover {
 
                 var newLine = Util.UserInput.getNewLinesFromUserInput(line, String.valueOf(userInput), "in");
 
-                coverConfigLines[lineNumber] = newLine;
+                configLines[lineNumber] = newLine;
             }
-
-            var writeOutput = Util.Output.generateWriteOutput(coverConfigLines);
-
-            Util.Output.writeToConfig(writeOutput, coverConfigPath, Main.getWritable());
-
-            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, Main.getBuildable() && asyncBuild);
         }
     }
 }

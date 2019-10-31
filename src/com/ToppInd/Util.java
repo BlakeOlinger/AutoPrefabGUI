@@ -205,13 +205,11 @@ final class Util {
             return lines;
         }
 
-        static String[] getLinesMapSwap(HashMap<Integer, String> lineMap, String[] lines) {
+        static void getLinesMapSwap(HashMap<Integer, String> lineMap, String[] lines) {
             for (int lineNumber : lineMap.keySet()) {
                 var newLine = lineMap.get(lineNumber);
                 lines[lineNumber] = newLine;
             }
-
-            return lines;
         }
     }
 
