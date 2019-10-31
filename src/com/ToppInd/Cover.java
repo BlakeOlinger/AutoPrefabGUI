@@ -574,7 +574,15 @@ final class Cover {
                     Main.getWritable());
 
             // call aluminum handle macro - tell macro if material is aluminum - material code "1"
-            SLDPRT.writeHandleOrientationBool(materialCode.contains("1"));
+            var isAluminum = materialCode.contains("1");
+            SLDPRT.writeHandleOrientationBool(isAluminum);
+
+            // if alum - call handle hole offset macro - non-aluminum don't have holes
+            if (isAluminum) {
+                // read from cover offset config and set X/Z offsets for 90/0deg
+                var handleIs90deg = Util.Configuration.hatchIs90deg();
+                SLDPRT.writeHandleOffsets(handleIs90deg, true);
+            }
 
             // write selected config.txt path to rebuild.txt app data
             Util.Output.writeToConfig(Util.Path.getCoverShapeConfigPath().toString(),
@@ -584,10 +592,17 @@ final class Cover {
             Util.Build.rebuild(DaemonProgram.MATERIAL_CONFIG, Main.getBuildable());
         }
 
+        // FIXME - refactor - this is broken - possibly check daemon
         static void writeBaseCoverChanges(String variableName) {
             var coverConfigPath = Main.getCoverShapeSelection().contains("Square") ?
                     Main.getSquareCoverConfigPath() : Main.getCoverConfigPath();
             var coverConfigContentLines = FilesUtil.read(coverConfigPath).split("\n");
+
+            // MACRO - if material is aluminum call offset placement -
+            if (Util.Configuration.isAluminum()) {
+                var is90deg = Util.Configuration.hatchIs90deg();
+                SLDPRT.writeHandleOffsets(is90deg, false);
+            }
 
             // gets cover variables - user input and appends the line with the changed value to the lines array
             for (String userInputVariable : Main.getCoverConfigVariableUserInputTable().keySet()) {
@@ -1319,8 +1334,9 @@ final class Cover {
             return holeNumber;
         }
     }
-// TODO - FINISH THIS
+
     static class SLDPRT {
+        // TODO - finish this
         static void writeHoleDiameterOnRadioSelect(String holeNumber, String userSelection) {
             // TODO - for hole number and user selection define diameter based on lookup table file
             //  - if user selection is none write hole bool = 0 - else make sure hole bool = 1
@@ -1393,6 +1409,60 @@ final class Cover {
             Util.Output.writeToConfig(writeOutput, coverConfigPath, Main.getWritable());
 
             Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, Main.getBuildable());
+        }
+// FIXME - modify all write/build steps to happen at the end of a sequence
+//  - have output lines then compile into one output rather than calling a bunch of writes and rebuilds
+        // only works with 90deg handles for now
+        static void writeHandleOffsets(boolean is90deg, boolean asyncBuild) {
+            // reads from cover offset and sets 90/0deg handle offsets for cover part config
+
+            // get path for selected cover shape
+            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
+            var coverConfigLines = Util.Path.getLinesFromPath(coverConfigPath);
+
+            // get line number map for handle offsets
+            var degree = is90deg ? "90deg" : "0deg";
+            var configHandleOffsetsLineNumberMap = Util.Map.getLineNumberTable(
+                    coverConfigLines,
+                    new HashMap<>(),
+                    0,
+                    "Handle", degree, "Offset"
+            );
+
+            // current offset target - Z: 4" up from lower hatch edge - X: 7" inset from outer hatch edge
+            var identifier = "\"Cover Hatch Door Length\"=";
+            var configDoorXLength = Util.Dimension.getValue(coverConfigLines, identifier);
+            identifier = "\"Cover Hatch Door Width\"=";
+            var configDoorZLength = Util.Dimension.getValue(coverConfigLines, identifier);
+
+            var handleLength = 4.25;
+
+            // define X/Z values for handle offsets:
+            // Z: xin + handleWidth + 4 = doorWidth / 2 -> zOffset = (doorWidth / 2) - 4
+            // X: xin + handleLength + 7 = doorLength / 2 -> xOffset = (doorWidth / 2) - handleLength - 7
+            configDoorXLength /= 2;
+            configDoorZLength /= 2;
+            var zOffset = configDoorZLength - 4;
+            var xOffset = configDoorXLength - handleLength - 7;
+            zOffset = Util.Dimension.formatDouble(zOffset);
+            xOffset = Util.Dimension.formatDouble(xOffset);
+
+            // replace lines in config lines
+            for (int lineNumber : configHandleOffsetsLineNumberMap.keySet()) {
+                var line = configHandleOffsetsLineNumberMap.get(lineNumber);
+                var isX = line.contains("X");
+                var userInput = isX ? xOffset : zOffset;
+
+                var newLine = Util.UserInput.getNewLinesFromUserInput(line, String.valueOf(userInput), "in");
+
+                coverConfigLines[lineNumber] = newLine;
+            }
+
+            var writeOutput = Util.Output.generateWriteOutput(coverConfigLines);
+
+            Util.Output.writeToConfig(writeOutput, coverConfigPath, Main.getWritable());
+
+            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, Main.getBuildable() && asyncBuild);
         }
     }
 }

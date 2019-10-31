@@ -248,6 +248,38 @@ final class Util {
         static String getValue(String line) {
             return line.split("=")[1].trim();
         }
+
+        static double getValue(String[] lines, String identifier) {
+            var value = "";
+
+            for (String line : lines) {
+                if (line.contains(identifier)) {
+                    value = line.split("=")[1].replace("in", "").trim();
+                }
+            }
+
+            return Double.parseDouble(value);
+        }
+
+        static double formatDouble(double value) {
+            var asString = String.valueOf(value).replace('.', '!');
+            var segments = asString.split("!");
+
+            var decimal = segments[1];
+
+            // truncate decimal after 3 places
+            if (decimal.length() >= 3) {
+                decimal = decimal.substring(0, 3);
+            }
+
+            // replace 0's with ''
+            decimal = decimal.replace("0", "").trim();
+
+            // reformat
+            var reformatted = segments[0] + "." + decimal;
+
+            return Double.parseDouble(reformatted);
+        }
     }
 
     static class Configuration {
@@ -274,6 +306,29 @@ final class Util {
             var orientation = Dimension.getValue(orientationLine);
 
             return orientation.contains("1");
+        }
+
+        static boolean isAluminum() {
+            // get path for selected cover shape
+            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
+            var configLines = Util.Path.getLinesFromPath(coverConfigPath);
+
+            // line number map for "Material"
+            var materialLineNumberMap = Util.Map.getLineNumberTable(
+                    configLines,
+                    new HashMap<>(),
+                    0,
+                    "Material"
+            );
+
+            var isAluminum = false;
+
+            for (int lineNumber : materialLineNumberMap.keySet()) {
+                var line = materialLineNumberMap.get(lineNumber);
+                isAluminum = line.contains("1");
+            }
+
+            return isAluminum;
         }
     }
 }
