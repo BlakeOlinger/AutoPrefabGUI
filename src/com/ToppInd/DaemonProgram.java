@@ -1,7 +1,7 @@
 package com.ToppInd;
 
 enum DaemonProgram {
-    REBUILD("AutoRebuildPart.appref-ms"),
+    PART_REBUILD("AutoRebuildPart.appref-ms"),
     MATERIAL_CONFIG("AutoMaterialConfig.appref-ms"),
     ASSEMBLY_REBUILD("AutoAssemblyRebuild.appref-ms"),
     ASSEMBLY_GENERAL("AutoGeneralAssembly.appref-ms"),
@@ -10,7 +10,7 @@ enum DaemonProgram {
     DRAWING_AUTO_DIMENSION("AutoDimension.appref-ms"),
     DRAWING_VIEW_SCALE("DrawingViewScale.appref-ms"),
     DRAWING_PROPERTIES("DrawingProperties.appref-ms"),
-    BASIC_REBUILD("Rebuild.appref-ms");
+    BASIC_REBUILD("BasicRebuild.appref-ms");
 
     private String program;
 

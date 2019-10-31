@@ -66,7 +66,7 @@ final class Drawing {
             var index = 0;
             for (String line : configLines) {
                 if (line.contains("Property")) {
-                    var newLine = Util.UserInput.getNewLineFromUserInput(line, "<>", "");
+                    var newLine = Util.UserInput.getNewLinesFromUserInput(line, "<>", "");
                     configLines[index] = newLine;
                 }
                 ++index;
@@ -93,7 +93,7 @@ final class Drawing {
                     if (line.contains("Property")) {
                         var identifier = text.replace(":", "").trim();
                         if (line.contains(identifier)) {
-                            var newLine = Util.UserInput.getNewLineFromUserInput(line, userInput, "");
+                            var newLine = Util.UserInput.getNewLinesFromUserInput(line, userInput, "");
                             configLines[index] = newLine;
                         }
                     }
@@ -120,7 +120,7 @@ final class Drawing {
                         lines,
                         lineNumberVariableMap,
                         "\"Drawing View1 Scale\"= ");
-                var newLines = Util.UserInput.getNewLineFromUserInput(
+                var newLines = Util.UserInput.getNewLinesFromUserInput(
                         lineNumberVariableMap,
                         lines,
                         userInput

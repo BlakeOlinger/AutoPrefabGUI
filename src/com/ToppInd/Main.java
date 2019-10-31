@@ -57,6 +57,10 @@ public class Main {
     static Path getHandleConfigPath() {
         return HANDLE_CONFIG_PATH;
     }
+    private static final Path SKELETON_CONFIG_PATH = Paths.get(PATH_BASE + "app data\\skeleton.txt");
+    static Path getSkeletonConfigPath() {
+        return SKELETON_CONFIG_PATH;
+    }
     private static final HashMap<Integer, Path> HOLE_FEATURE_CONFIG_MAP = new HashMap<>(
             Map.of(
                     1, Paths.get(PATH_BASE + "blob - L2\\blob.holeFeature_1.txt"),
@@ -106,7 +110,11 @@ public class Main {
     static boolean getMateCalibration() {
         return ASSEMBLY_MATE_CALIBRATION;
     }
-
+// TODO - make a hole assembly feature selection define the part based on lookup tables:
+//  - 1) hole diameter
+//  - 2) BC radius
+//  - 3) BC hole count
+//  - 4) BC degree offset
     public static void main(String[] args) {
         // display main window
          displayAppWindow();

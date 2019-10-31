@@ -17,6 +17,30 @@ final class Cover {
             return button;
         }
 
+        static JButton circleSelectButton() {
+            var button = new JButton("Circular");
+            button.addActionListener(e -> Window.displayCoverConfigWindow("Circular"));
+            return button;
+        }
+
+        static JButton squareSelectButton() {
+            var button = new JButton("Square");
+            button.addActionListener(e -> Window.displayCoverConfigWindow("Square"));
+            return button;
+        }
+
+        static JButton hatch90degButton() {
+            var button = new JButton("Hatch 90deg");
+            button.addActionListener(e -> ActionHandler.setHatchOrientation(true));
+            return button;
+        }
+
+        static JButton hatch0degButton() {
+            var button = new JButton("Hatch 0deg");
+            button.addActionListener(e -> ActionHandler.setHatchOrientation(false));
+            return button;
+        }
+
         static JButton coverParamsButton(String label, ActionListener actionListener) {
             var button = new JButton(label);
             button.addActionListener(actionListener);
@@ -41,6 +65,12 @@ final class Cover {
             return button;
         }
 
+        static JButton materialConfigButton(String material) {
+            var button = new JButton(material);
+            button.addActionListener(e -> ActionHandler.writeMaterialConfig(material));
+            return button;
+        }
+
         static JButton coverAssemblyConfigureButton() {
             var button = new JButton("Cover Assembly Configurer");
             button.addActionListener(e -> Window.displayCoverAssemblyConfigWindow());
@@ -52,8 +82,8 @@ final class Cover {
             button.addActionListener(e -> Window.displayInspectionPlateConfigWindow());
             return button;
         }
-
         // at some point this will need to be broken up
+
         static JButton confirmHoleAssemblyConfigButton(String variableName, ButtonGroup buttonGroup) {
             var button = new JButton("Confirm");
             button.addActionListener(e -> {
@@ -71,6 +101,10 @@ final class Cover {
                 } catch (NullPointerException exception) {
                     userSelection = "none";
                 }
+
+                // for user selection and variable name automatically configure *.SLDPRT dimensions
+                // diameter first - write only
+                SLDPRT.writeHoleDiameterOnRadioSelect(variableName, userSelection);
 
                 // populate a line number - feature bool map
                 var lineNumberFeatureBoolTable = new HashMap<Integer, String>();
@@ -111,7 +145,7 @@ final class Cover {
                 // read part config.txt for the variable name (hole number) and X/Z negative state - read only
                 // only care about the current variable name (hole number) X/Z
                 var partConfigXZNegationStateTable = new HashMap<String, Boolean>();
-                var partConfigLines = FilesUtil.read(Util.Path.getCoverConfigPath()).split("\n");
+                var partConfigLines = FilesUtil.read(Util.Path.getCoverShapeConfigPath()).split("\n");
                 for (String line : partConfigLines) {
                     if (line.contains("Negative") && line.contains(variableName)) {
                         var isNegative = line.split("=")[1].contains("1");
@@ -320,13 +354,7 @@ final class Cover {
             return button;
         }
 
-        static JButton materialConfigButton(String material) {
-            var button = new JButton(material);
-            button.addActionListener(e -> ActionHandler.writeMaterialConfig(material));
-            return button;
-        }
-
-        static JButton flipAssemblyMate(String mate, Path path) {
+        static JButton flipAssemblyMateButton(String mate, Path path) {
             var button = new JButton("Mate Flip");
             button.addActionListener(e -> ActionHandler.handleSingleMateFlip(mate, path));
             return button;
@@ -338,10 +366,10 @@ final class Cover {
             var userInput = Util.UserInput.getUserTextInput(event);
             if (userInput != null) {
                 var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
-                var boolLineNumberTable = Util.Map.getSingleLineNumberTable(assemblyConfigLines, line);
+                var boolLineNumberTable = Util.Map.getLineNumberTable(assemblyConfigLines, line);
 
                 for (int lineNumber : boolLineNumberTable.keySet()) {
-                    var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
+                    var newLine = Util.UserInput.getNewLinesFromUserInput(assemblyConfigLines[lineNumber],
                             userInput, "");
 
                     assemblyConfigLines[lineNumber] = newLine;
@@ -364,10 +392,10 @@ final class Cover {
             var userInput = Util.UserInput.getUserTextInput(event);
             if (userInput != null) {
                 var assemblyConfigLines = Util.Path.getLinesFromPath(Main.getCoverAssemblyConfigPath());
-                var boolLineNumberTable = Util.Map.getSingleLineNumberTable(assemblyConfigLines, line);
+                var boolLineNumberTable = Util.Map.getLineNumberTable(assemblyConfigLines, line);
 
                 for (int lineNumber : boolLineNumberTable.keySet()) {
-                    var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
+                    var newLine = Util.UserInput.getNewLinesFromUserInput(assemblyConfigLines[lineNumber],
                             userInput, "");
 
                     assemblyConfigLines[lineNumber] = newLine;
@@ -392,10 +420,10 @@ final class Cover {
             var userInput = Util.UserInput.getUserTextInput(event);
             if (userInput != null) {
                 var assemblyConfigLines = Util.Path.getLinesFromPath(Main.getCoverAssemblyConfigPath());
-                var dimensionLineNumberTable = Util.Map.getSingleLineNumberTable(assemblyConfigLines, line);
+                var dimensionLineNumberTable = Util.Map.getLineNumberTable(assemblyConfigLines, line);
 
                 for (int lineNumber : dimensionLineNumberTable.keySet()) {
-                    var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
+                    var newLine = Util.UserInput.getNewLinesFromUserInput(assemblyConfigLines[lineNumber],
                             userInput, "in");
 
                     assemblyConfigLines[lineNumber] = newLine;
@@ -420,10 +448,10 @@ final class Cover {
             var userInput = Util.UserInput.getUserTextInput(event);
             if (userInput != null) {
                 var assemblyConfigLines = Util.Path.getLinesFromPath(configPath);
-                var dimensionLineNumberTable = Util.Map.getSingleLineNumberTable(assemblyConfigLines, line);
+                var dimensionLineNumberTable = Util.Map.getLineNumberTable(assemblyConfigLines, line);
 
                 for (int lineNumber : dimensionLineNumberTable.keySet()) {
-                    var newLine = Util.UserInput.getNewLineFromUserInput(assemblyConfigLines[lineNumber],
+                    var newLine = Util.UserInput.getNewLinesFromUserInput(assemblyConfigLines[lineNumber],
                             userInput, "in");
 
                     assemblyConfigLines[lineNumber] = newLine;
@@ -500,7 +528,7 @@ final class Cover {
 
                 var lineIdentifier = "\"" + XZ + " Clear Access\"=";
 
-                var lineNumberTable = Util.Map.getSingleLineNumberTable(partConfigLines, lineIdentifier);
+                var lineNumberTable = Util.Map.getLineNumberTable(partConfigLines, lineIdentifier);
 
                 for (int lineNumber : lineNumberTable.keySet()) {
                     var newLine = lineNumberTable.get(lineNumber).split("=")[0].trim() +
@@ -510,7 +538,7 @@ final class Cover {
                 }
 
                 // write app data
-                Util.Output.writeToConfig(Util.Path.getCoverConfigPath().toString(), Main.getRebuildDaemonAppDataPath(),
+                Util.Output.writeToConfig(Util.Path.getCoverShapeConfigPath().toString(), Main.getRebuildDaemonAppDataPath(),
                         Main.getWritable());
 
                 // write to assembly config
@@ -523,27 +551,33 @@ final class Cover {
         }
 
         static void writeMaterialConfig(String material) {
-            var configLines = FilesUtil.read(Main.getCoverShapeSelection().contains("Square") ?
-                    Main.getSquareCoverConfigPath() : Main.getCoverConfigPath()).split("\n");
-            for (var i = 0; i < configLines.length; ++i) {
-                if (configLines[i].split("=")[0].contains("Material")) {
-                    configLines[i] = configLines[i].replace(configLines[i].split("=")[1],
-                            " " + Main.getMaterialConfigTable().get(material));
-                }
-            }
+            // get path for selected cover shape
+            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
+            var configLines = Util.Path.getLinesFromPath(coverConfigPath);
 
-            var builder = new StringBuilder();
-            for (String line : configLines) {
-                builder.append(line);
-                builder.append("\n");
-            }
+            // line number map for "Material"
+            var materialLineNumberMap = Util.Map.getLineNumberTable(
+                    configLines,
+                    new HashMap<>(),
+                    0,
+                    "Material"
+            );
+
+            var materialCode = Main.getMaterialConfigTable().get(material);
+
+            var newLines = Util.UserInput.getNewLinesFromUserInput(materialLineNumberMap, configLines, materialCode);
+
+            var writeOutput = Util.Output.generateWriteOutput(newLines);
 
             // write material config to selected config.txt file
-            Util.Output.writeToConfig(builder.toString(), Util.Path.getCoverConfigPath(),
+            Util.Output.writeToConfig(writeOutput, Util.Path.getCoverShapeConfigPath(),
                     Main.getWritable());
 
+            // call aluminum handle macro - tell macro if material is aluminum - material code "1"
+            SLDPRT.writeHandleOrientationBool(materialCode.contains("1"));
+
             // write selected config.txt path to rebuild.txt app data
-            Util.Output.writeToConfig(Util.Path.getCoverConfigPath().toString(),
+            Util.Output.writeToConfig(Util.Path.getCoverShapeConfigPath().toString(),
                     Main.getRebuildDaemonAppDataPath(), Main.getWritable());
 
             // call rebuild for AutoMaterialConfig.appref-ms
@@ -665,7 +699,7 @@ final class Cover {
                     Main.getWritable());
 
             // call auto-rebuild daemon
-            Util.Build.rebuild(DaemonProgram.REBUILD, Main.getBuildable());
+            Util.Build.rebuild(DaemonProgram.PART_REBUILD, Main.getBuildable());
         }
 
         static void handleSingleMateFlip(String mate, Path path) {
@@ -687,9 +721,9 @@ final class Cover {
             for (var i = 0; i < configLines.length; ++i) {
                 var line = configLines[i];
                 if (line.contains(userSelection) && !line.contains("IIF")) {
-                    configLines[i] = Util.UserInput.getNewLineFromUserInput(line, "1", "");
+                    configLines[i] = Util.UserInput.getNewLinesFromUserInput(line, "1", "");
                 } else if (!line.contains(userSelection) && !line.contains("IIF")){
-                    configLines[i] = Util.UserInput.getNewLineFromUserInput(line, "0", "");
+                    configLines[i] = Util.UserInput.getNewLinesFromUserInput(line, "0", "");
                 }
             }
 
@@ -698,6 +732,30 @@ final class Cover {
             Util.Output.writeToConfig(newLines, Main.getHandleConfigPath(), Main.getWritable());
 
             Util.Build.rebuild(DaemonProgram.ASSEMBLY_REBUILD, Main.getBuildable());
+        }
+
+        static void setHatchOrientation(boolean is90deg) {
+            // set skeleton config hatch orientation to 1 for is90deg true else 0
+
+            // get skeleton config path and lines
+            var skeletonConfigPath = Main.getSkeletonConfigPath();
+            var skeletonConfigLines = Util.Path.getLinesFromPath(skeletonConfigPath);
+
+            // get line number map for "Hatch Orientation"
+            var orientationLineNumberMap = Util.Map.getLineNumberTable(
+                    skeletonConfigLines,
+                    "Hatch Orientation"
+            );
+
+            // set user selected output
+            var orientation = is90deg ? "1" : "0";
+
+            var newLines = Util.UserInput.getNewLinesFromUserInput(
+                    orientationLineNumberMap, skeletonConfigLines, orientation);
+
+            var writeOutput = Util.Output.generateWriteOutput(newLines);
+
+            Util.Output.writeToConfig(writeOutput, skeletonConfigPath, Main.getWritable());
         }
     }
 
@@ -709,13 +767,11 @@ final class Cover {
             window.setLocationRelativeTo(null);
             window.setLayout(new FlowLayout());
 
-            var circleSelectButton = new JButton("Circular");
-            circleSelectButton.addActionListener(e -> displayCoverConfigWindow("Circular"));
-            var squareSelectButton = new JButton("Square");
-            squareSelectButton.addActionListener(e -> displayCoverConfigWindow("Square"));
+            window.add(Button.circleSelectButton());
+            window.add(Button.squareSelectButton());
 
-            window.add(circleSelectButton);
-            window.add(squareSelectButton);
+            window.add(Button.hatch90degButton());
+            window.add(Button.hatch0degButton());
 
             window.setVisible(true);
         }
@@ -742,7 +798,7 @@ final class Cover {
             );
 
             // read cover config contents and set cover config variable table
-            Util.Map.setVariableLineNumberMap(Util.Path.getCoverConfigPath(),
+            Util.Map.setVariableLineNumberMap(Util.Path.getCoverShapeConfigPath(),
                     Main.getCoverConfigVariableNameLineNumberTable());
 
             // define total number of hole features to know the number of hole feature buttons to produce
@@ -878,7 +934,7 @@ final class Cover {
             textBox0degXOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"GT Box 0deg X Offset\"="));
             window.add(textBox0degXOffset);
-            window.add(Button.flipAssemblyMate("GT Box 0deg X Offset",
+            window.add(Button.flipAssemblyMateButton("GT Box 0deg X Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             window.add(new JLabel("GT Box 0deg Z Offset: "));
@@ -886,7 +942,7 @@ final class Cover {
             textBox0degZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"GT Box 0deg Z Offset\"="));
             window.add(textBox0degZOffset);
-            window.add(Button.flipAssemblyMate("GT Box 0deg Z Offset",
+            window.add(Button.flipAssemblyMateButton("GT Box 0deg Z Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             var GTBox90degLabel = new JLabel("GT Box 90deg Bool: ");
@@ -902,7 +958,7 @@ final class Cover {
             textBox90degXOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"GT Box 90deg X Offset\"="));
             window.add(textBox90degXOffset);
-            window.add(Button.flipAssemblyMate("GT Box 90deg X Offset",
+            window.add(Button.flipAssemblyMateButton("GT Box 90deg X Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             window.add(new JLabel("GT Box 90deg Z Offset: "));
@@ -910,7 +966,7 @@ final class Cover {
             textBox90degZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"GT Box 90deg Z Offset\"="));
             window.add(textBox90degZOffset);
-            window.add(Button.flipAssemblyMate("GT Box 90deg Z Offset",
+            window.add(Button.flipAssemblyMateButton("GT Box 90deg Z Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             window.add(Button.handleConfig());
@@ -943,7 +999,7 @@ final class Cover {
             textBox0degXOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"Cover Hatch Handle X Offset\"="));
             window.add(textBox0degXOffset);
-            window.add(Button.flipAssemblyMate("Cover Hatch Handle X Offset",
+            window.add(Button.flipAssemblyMateButton("Cover Hatch Handle X Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             window.add(new JLabel("Handle Z Offset: "));
@@ -951,7 +1007,7 @@ final class Cover {
             textBox0degZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"Cover Hatch Handle Z Offset\"="));
             window.add(textBox0degZOffset);
-            window.add(Button.flipAssemblyMate("Cover Hatch Handle Z Offset",
+            window.add(Button.flipAssemblyMateButton("Cover Hatch Handle Z Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             window.setVisible(true);
@@ -996,7 +1052,7 @@ final class Cover {
             angleFramePlacementZOffset.addActionListener(e -> ActionHandler.assemblyDimensionActionHandler(e,
                     "\"Angle Frame Placement Z Offset\"="));
             window.add(angleFramePlacementZOffset);
-            window.add(Button.flipAssemblyMate("Angle Frame Placement Z Offset",
+            window.add(Button.flipAssemblyMateButton("Angle Frame Placement Z Offset",
                     Main.getCoverAssemblyConfigPath()));
 
             window.setVisible(true);
@@ -1261,6 +1317,82 @@ final class Cover {
                 holeNumber = Integer.parseInt(line.split(" ")[1].trim());
             }
             return holeNumber;
+        }
+    }
+// TODO - FINISH THIS
+    static class SLDPRT {
+        static void writeHoleDiameterOnRadioSelect(String holeNumber, String userSelection) {
+            // TODO - for hole number and user selection define diameter based on lookup table file
+            //  - if user selection is none write hole bool = 0 - else make sure hole bool = 1
+
+            // get path for selected cover shape
+            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
+            var coverConfigLines = Util.Path.getLinesFromPath(coverConfigPath);
+
+            // for the hole number get line number map for hole booleans
+            var boolLineNumberMap = Util.Map.getLineNumberTable(
+                    coverConfigLines,
+                    new HashMap<>(),
+                    0,
+                    holeNumber, "Bool");
+
+            // write only - set config lines bool values
+            var boolConfigLines = Util.Output.setBoolLines(
+                    coverConfigLines,
+                    boolLineNumberMap,
+                    userSelection.contains("none"));
+        }
+
+        static void writeHandleOrientationBool(boolean isAluminum) {
+            // get path for selected cover shape
+            var coverConfigPath = Util.Path.getCoverShapeConfigPath();
+            var coverConfigLines = Util.Path.getLinesFromPath(coverConfigPath);
+
+            // get bool line map from cover part config for hatch handle
+            var handleBoolLineNumberMap = Util.Map.getLineNumberTable(
+                    coverConfigLines,
+                    new HashMap<>(),
+                    0,
+                    "Handle", "Bool"
+            );
+
+            // get hatch orientation - 90deg versus 0deg
+            var hatchIs90deg = Util.Configuration.hatchIs90deg();
+
+            // if hatch is 90 write 0 to 0deg 1 to 90deg and vice versa
+            for (int lineNumber : handleBoolLineNumberMap.keySet()) {
+                var line = handleBoolLineNumberMap.get(lineNumber);
+                var newLine = "";
+
+                if (isAluminum) {
+
+                    if (line.contains("9")) {
+                        if (hatchIs90deg) {
+                            newLine = Util.UserInput.getNewLinesFromUserInput(line, "1");
+                        } else {
+                            newLine = Util.UserInput.getNewLinesFromUserInput(line, "0");
+                        }
+                    } else {
+                        if (hatchIs90deg) {
+                            newLine = Util.UserInput.getNewLinesFromUserInput(line, "0");
+                        } else {
+                            newLine = Util.UserInput.getNewLinesFromUserInput(line, "1");
+                        }
+                    }
+                } else {
+                    newLine = Util.UserInput.getNewLinesFromUserInput(line, "0");
+                }
+
+                handleBoolLineNumberMap.put(lineNumber, newLine);
+            }
+
+            var boolConfigLines = Util.Output.getLinesMapSwap(handleBoolLineNumberMap, coverConfigLines);
+
+            var writeOutput = Util.Output.generateWriteOutput(boolConfigLines);
+
+            Util.Output.writeToConfig(writeOutput, coverConfigPath, Main.getWritable());
+
+            Util.Build.rebuild(DaemonProgram.BASIC_REBUILD, Main.getBuildable());
         }
     }
 }

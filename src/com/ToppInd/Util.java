@@ -16,12 +16,16 @@ final class Util {
             }
         }
 
-        static String getNewLineFromUserInput(String original, String userInput, String units) {
+        static String getNewLinesFromUserInput(String original, String userInput, String units) {
             return original.split("=")[0].trim() + "= " + userInput + units;
         }
 
-        static String[] getNewLineFromUserInput(HashMap<Integer, String> lineNumberVariableMap,
-                                                String[] lines, String userInput) {
+        static String getNewLinesFromUserInput(String original, String userInput) {
+            return original.split("=")[0].trim() + "= " + userInput;
+        }
+
+        static String[] getNewLinesFromUserInput(HashMap<Integer, String> lineNumberVariableMap,
+                                                 String[] lines, String userInput) {
             var original = "";
 
             for (int lineNumber : lineNumberVariableMap.keySet()) {
@@ -71,7 +75,7 @@ final class Util {
             }
         }
 
-        static HashMap<Integer, String> getSingleLineNumberTable(String[] lines, String identifier) {
+        static HashMap<Integer, String> getLineNumberTable(String[] lines, String identifier) {
             var map = new HashMap<Integer, String>();
             var index = 0;
 
@@ -84,6 +88,44 @@ final class Util {
             }
 
             return map;
+        }
+
+        static HashMap<Integer, String> getLineNumberTable(String[] lines, HashMap<Integer, String> lineMap,
+                                                           int identifierIndex, String... identifier) {
+            var index = 0;
+
+            if (identifierIndex == 0) {
+                for (String line : lines) {
+                    var comparator = identifier[identifierIndex];
+                    if (line.contains(comparator) && !line.contains("IIF") &&
+                    !line.contains("@")) {
+                        lineMap.put(index, line);
+                    }
+                    ++index;
+                }
+            } else {
+                var newMap = new HashMap<Integer, String>();
+
+                for (int lineNumber : lineMap.keySet()) {
+                    var line = lineMap.get(lineNumber);
+                    if (line.contains(identifier[identifierIndex])) {
+                        newMap.put(lineNumber, line);
+                    }
+                }
+
+                lineMap = newMap;
+            }
+
+            if (++identifierIndex < identifier.length) {
+                lineMap = getLineNumberTable(
+                        lines,
+                        lineMap,
+                        identifierIndex,
+                        identifier
+                );
+            }
+
+            return lineMap;
         }
     }
 
@@ -111,7 +153,7 @@ final class Util {
             return labels;
         }
 
-        static java.nio.file.Path getCoverConfigPath() {
+        static java.nio.file.Path getCoverShapeConfigPath() {
             return Main.getCoverShapeSelection().contains("Square") ?
                     Main.getSquareCoverConfigPath() :
                     Main.getCoverConfigPath();
@@ -149,6 +191,28 @@ final class Util {
 
             return formattedFeature.toString();
         }
+
+        static String[] setBoolLines(String[] lines,
+                                     HashMap<Integer, String> lineNumberMap,
+                                     boolean isNone) {
+            var bool0_1 = isNone ? "0" : "1";
+
+            for (int lineNumber : lineNumberMap.keySet()) {
+                var newLine = lines[lineNumber].split("=")[0].trim() + "= " + bool0_1;
+                lines[lineNumber] = newLine;
+            }
+
+            return lines;
+        }
+
+        static String[] getLinesMapSwap(HashMap<Integer, String> lineMap, String[] lines) {
+            for (int lineNumber : lineMap.keySet()) {
+                var newLine = lineMap.get(lineNumber);
+                lines[lineNumber] = newLine;
+            }
+
+            return lines;
+        }
     }
 
     static class Build {
@@ -179,6 +243,37 @@ final class Util {
                     .replace("\"", "").trim();
 
             return distanceLine;
+        }
+
+        static String getValue(String line) {
+            return line.split("=")[1].trim();
+        }
+    }
+
+    static class Configuration {
+        static boolean hatchIs90deg() {
+            // reads from config skeleton lookup file
+            // if orientation is "1" return true else false
+
+            // get skeleton config path and lines
+            var skeletonConfigPath = Main.getSkeletonConfigPath();
+            var skeletonConfigLines = Util.Path.getLinesFromPath(skeletonConfigPath);
+
+            // get line number map for "Hatch Orientation"
+            var orientationLineNumberMap = Util.Map.getLineNumberTable(
+                    skeletonConfigLines,
+                    "Hatch Orientation"
+            );
+
+            var orientationLine = "";
+
+            for (int lineNumber : orientationLineNumberMap.keySet()) {
+                orientationLine = orientationLineNumberMap.get(lineNumber);
+            }
+
+            var orientation = Dimension.getValue(orientationLine);
+
+            return orientation.contains("1");
         }
     }
 }
